@@ -1,0 +1,18 @@
+# Ignore dependencies and build outputs
+node_modules
+dist
+
+# Ignore local env files
+.env
+.env.*
+
+# Ignore git and editor folders
+.git
+.vscode
+.idea
+
+# Misc
+npm-debug.log*
+server_output.txt
+Dockerfile
+docker-compose.yml
