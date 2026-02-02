@@ -1,0 +1,67 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+lib/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Coverage
+coverage/
+.nyc_output/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Misc
+.cache/
+.tmp/
+server_output.txt
+*.tgz
+*.zip
+
+# Test & tooling
+jest-results.json
+jest.cache
+
+# Database
+*.sqlite
+*.sqlite3
+
+# Caches
+.eslintcache
+.prettiercache
+.pnp.*
+
+# PEM / keys
+*.pem
+
+# Local overrides
+*.local
