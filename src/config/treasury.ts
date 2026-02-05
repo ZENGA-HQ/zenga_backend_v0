@@ -1,5 +1,5 @@
 /**
- * VELO Treasury Configuration
+ * ZENGA Treasury Configuration
  * 
  * Fee collection wallet addresses for each blockchain network
  * Fees are sent to these addresses after successful transactions
@@ -17,7 +17,7 @@ export class TreasuryConfig {
     static getTreasuryWallet(chain: string, network: string): string {
         // Try a few environment key patterns to be tolerant of different .env naming
         const key1 = `${chain.toUpperCase()}_${network.toUpperCase()}_TREASURY`; // e.g. SOLANA_TESTNET_TREASURY
-        const key2 = `VELO_TREASURY_${(chain === 'solana' ? 'SOL' : chain.toUpperCase())}_${network.toUpperCase()}`; // e.g. VELO_TREASURY_SOL_TESTNET
+        const key2 = `ZENGA_TREASURY_${(chain === 'solana' ? 'SOL' : chain.toUpperCase())}_${network.toUpperCase()}`; // e.g. ZENGA_TREASURY_SOL_TESTNET
 
         const envAddress1 = (process.env[key1] || '').trim();
         const envAddress2 = (process.env[key2] || '').trim();
@@ -28,28 +28,28 @@ export class TreasuryConfig {
         // Fallback to default treasury addresses (REPLACE THESE WITH YOUR ACTUAL ADDRESSES)
         const defaultWallets: Record<string, string> = {
             // Ethereum
-            'ethereum_mainnet': process.env.VELO_TREASURY_ETH_MAINNET || '',
-            'ethereum_sepolia': process.env.VELO_TREASURY_ETH_SEPOLIA || '',
+            'ethereum_mainnet': process.env.ZENGA_TREASURY_ETH_MAINNET || '',
+            'ethereum_sepolia': process.env.ZENGA_TREASURY_ETH_SEPOLIA || '',
             
             // Bitcoin
-            'bitcoin_mainnet': process.env.VELO_TREASURY_BTC_MAINNET || '',
-            'bitcoin_testnet': process.env.VELO_TREASURY_BTC_TESTNET || '',
+            'bitcoin_mainnet': process.env.ZENGA_TREASURY_BTC_MAINNET || '',
+            'bitcoin_testnet': process.env.ZENGA_TREASURY_BTC_TESTNET || '',
             
             // Starknet
-            'starknet_mainnet': process.env.VELO_TREASURY_STRK_MAINNET || '',
-            'starknet_testnet': process.env.VELO_TREASURY_STRK_TESTNET || '',
+            'starknet_mainnet': process.env.ZENGA_TREASURY_STRK_MAINNET || '',
+            'starknet_testnet': process.env.ZENGA_TREASURY_STRK_TESTNET || '',
             
             // Solana
-            'solana_mainnet': process.env.VELO_TREASURY_SOL_MAINNET || '',
-            'solana_testnet': process.env.VELO_TREASURY_SOL_TESTNET || '',
+            'solana_mainnet': process.env.ZENGA_TREASURY_SOL_MAINNET || '',
+            'solana_testnet': process.env.ZENGA_TREASURY_SOL_TESTNET || '',
             
             // Stellar
-            'stellar_mainnet': process.env.VELO_TREASURY_XLM_MAINNET || '',
-            'stellar_testnet': process.env.VELO_TREASURY_XLM_TESTNET || '',
+            'stellar_mainnet': process.env.ZENGA_TREASURY_XLM_MAINNET || '',
+            'stellar_testnet': process.env.ZENGA_TREASURY_XLM_TESTNET || '',
             
             // Polkadot
-            'polkadot_mainnet': process.env.VELO_TREASURY_DOT_MAINNET || '',
-            'polkadot_testnet': process.env.VELO_TREASURY_DOT_TESTNET || '',
+            'polkadot_mainnet': process.env.ZENGA_TREASURY_DOT_MAINNET || '',
+            'polkadot_testnet': process.env.ZENGA_TREASURY_DOT_TESTNET || '',
         };
 
         const lookupKey = `${chain.toLowerCase()}_${network.toLowerCase()}`;
@@ -96,7 +96,7 @@ export class TreasuryConfig {
                             address,
                             chain,
                             network,
-                            description: `VELO ${chain} ${network} treasury`
+                            description: `ZENGA ${chain} ${network} treasury`
                         });
                     }
                 } catch {

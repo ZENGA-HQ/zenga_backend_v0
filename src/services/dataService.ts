@@ -294,7 +294,7 @@ export class DataService {
         purchase.network,
         purchase.dataplan_id,
         purchase.phone_number,
-        `VELO_DATA_${purchase.id}_${Date.now()}`
+        `ZENGA_DATA_${purchase.id}_${Date.now()}`
       );
 
       console.log(`📞 Nellobytes API response:`, providerResult);

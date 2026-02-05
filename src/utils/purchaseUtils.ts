@@ -63,13 +63,13 @@ const CRYPTO_ID_MAP: { [key in Blockchain]: string } = {
  */
 export function getBlockchainWallet(blockchain: Blockchain): string {
   const walletMap: { [key in Blockchain]: string | undefined } = {
-    [Blockchain.ETHEREUM]: process.env.VELO_TREASURY_ETH_MAINNET,
-    [Blockchain.BITCOIN]: process.env.VELO_TREASURY_BTC_MAINNET,
-    [Blockchain.SOLANA]: process.env.VELO_TREASURY_SOL_MAINNET,
-    [Blockchain.STELLAR]: process.env.VELO_TREASURY_XLM_MAINNET,
-    [Blockchain.POLKADOT]: process.env.VELO_TREASURY_DOT_MAINNET,
-    [Blockchain.STARKNET]: process.env.VELO_TREASURY_STRK_MAINNET,
-    [Blockchain.USDT_ERC20]: process.env.VELO_TREASURY_USDT_MAINNET,
+    [Blockchain.ETHEREUM]: process.env.ZENGA_TREASURY_ETH_MAINNET,
+    [Blockchain.BITCOIN]: process.env.ZENGA_TREASURY_BTC_MAINNET,
+    [Blockchain.SOLANA]: process.env.ZENGA_TREASURY_SOL_MAINNET,
+    [Blockchain.STELLAR]: process.env.ZENGA_TREASURY_XLM_MAINNET,
+    [Blockchain.POLKADOT]: process.env.ZENGA_TREASURY_DOT_MAINNET,
+    [Blockchain.STARKNET]: process.env.ZENGA_TREASURY_STRK_MAINNET,
+    [Blockchain.USDT_ERC20]: process.env.ZENGA_TREASURY_USDT_MAINNET,
   };
 
   const walletAddress = walletMap[blockchain];

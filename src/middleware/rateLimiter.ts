@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { RequestHandler } from 'express';
 
-// Basic in-memory rate limiter for development. For production use a
+// Basic in-memory rate limiter for deZENGApment. For production use a
 // Redis-backed store (e.g. rate-limit-redis) so limits are shared across
 // multiple instances.
 

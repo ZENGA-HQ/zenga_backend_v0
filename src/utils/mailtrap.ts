@@ -25,7 +25,7 @@ export async function sendMailtrapMail({
     subject,
     text,
     html,
-    fromName = 'Velo',
+    fromName = 'ZENGA',
 }: {
     to: string;
     subject: string;

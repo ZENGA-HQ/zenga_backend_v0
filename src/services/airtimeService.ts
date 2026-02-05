@@ -209,7 +209,7 @@ export class AirtimeService {
         purchase.network,
         purchase.fiat_amount,
         purchase.phone_number,
-        `VELO_${purchase.id}_${Date.now()}`
+        `ZENGA_${purchase.id}_${Date.now()}`
       );
 
       console.log(`📞 Nellobytes API response:`, providerResult);

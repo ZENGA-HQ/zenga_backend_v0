@@ -1,6 +1,6 @@
 /**
  * Fee Collection Service
- * Handles sending collected fees to VELO treasury wallets
+ * Handles sending collected fees to ZENGA treasury wallets
  */
 
 import { AppDataSource } from '../config/database';

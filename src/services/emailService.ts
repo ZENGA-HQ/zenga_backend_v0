@@ -7,7 +7,7 @@ export async function sendRegistrationEmails(email: string, otp: string) {
         await sendMailtrapMail({
             to: email,
             subject: 'Verify your email',
-            text: 'Welcome to Velo! Please verify your email address.',
+            text: 'Welcome to ZENGA! Please verify your email address.',
             html: registerTemplate(email),
         });
         await sendMailtrapMail({

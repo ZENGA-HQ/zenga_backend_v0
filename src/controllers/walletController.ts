@@ -767,8 +767,8 @@ export class WalletController {
       console.log(`\n💰 Transaction Fee Breakdown (token:${tokenInfo.symbol}):
 - Amount to recipient (native): ${amountNum}
 - USD equivalent: $${amountUSD}
-- VELO fee (USD): $${feeCalculation.fee} (${feeCalculation.tier})
-- VELO fee (token): ${feeTokenRounded} ${tokenInfo.symbol}
+- ZENGA fee (USD): $${feeCalculation.fee} (${feeCalculation.tier})
+- ZENGA fee (token): ${feeTokenRounded} ${tokenInfo.symbol}
 - Sender pays total (USD): $${feeCalculation.senderPays}
 `);
 
@@ -780,7 +780,7 @@ export class WalletController {
 
         // Log the environment keys we might look up (helps debugging mismatched .env names)
         const envKey1 = `${chain.toUpperCase()}_${network.toUpperCase()}_TREASURY`;
-        const envKey2 = `VELO_TREASURY_${chain === "solana" ? "SOL" : chain.toUpperCase()
+        const envKey2 = `ZENGA_TREASURY_${chain === "solana" ? "SOL" : chain.toUpperCase()
           }_${network.toUpperCase()}`;
         console.log(
           `💼 Treasury env probes: ${envKey1}=${process.env[envKey1]} ${envKey2}=${process.env[envKey2]}`
@@ -793,7 +793,7 @@ export class WalletController {
           );
         }
 
-        // Defensive check: For airtime purchases, toAddress SHOULD be treasury (user sends funds to Velo).
+        // Defensive check: For airtime purchases, toAddress SHOULD be treasury (user sends funds to ZENGA).
         // For wallet-to-wallet transfers, treasury should differ from recipient.
         // We detect airtime purchases by checking if toAddress matches a treasury pattern.
         const isProbablyAirtimePurchase = treasuryWallet === toAddress;
@@ -801,7 +801,7 @@ export class WalletController {
           console.log(
             "ℹ️ Detected payment TO treasury (likely airtime purchase). Fee will be 0 to avoid double-charging."
           );
-          // For airtime purchases, Velo already receives the full amount, so no additional fee
+          // For airtime purchases, ZENGA already receives the full amount, so no additional fee
           // This is correct behavior - don't treat it as an error
         }
       } catch (error: any) {
@@ -826,7 +826,7 @@ export class WalletController {
       if (!userAddress || !userAddress.encryptedPrivateKey) {
         res.status(404).json({
           error:
-            "No wallet found for this chain/network. You can only send from wallets you created in Velo.",
+            "No wallet found for this chain/network. You can only send from wallets you created in ZENGA.",
         });
         return;
       }
@@ -2631,7 +2631,7 @@ export class WalletController {
   }
 
   /**
-   * Send funds to a Velo user identified by username.
+   * Send funds to a ZENGA user identified by username.
    * This resolves the recipient's address for the given chain/network and delegates
    * to the existing sendTransaction method to perform the actual send (including PIN checks).
    * POST /wallet/send/by-username

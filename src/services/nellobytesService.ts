@@ -428,7 +428,7 @@ export class NellobytesService {
       Amount: params.amount.toString(),
       PhoneNo: params.phoneNo,
       // ADD REQUIRED REQUESTID PARAMETER:
-      RequestID: `VELO_ELECTRICITY_${Date.now()}_${Math.random()
+      RequestID: `ZENGA_ELECTRICITY_${Date.now()}_${Math.random()
         .toString(36)
         .substring(2, 9)}`,
     };

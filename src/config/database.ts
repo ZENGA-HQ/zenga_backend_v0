@@ -23,7 +23,7 @@ import { FiatTransaction } from "../entities/FiatTransaction";
 export const AppDataSource = new DataSource({
   type: "postgres",
   url: process.env.DATABASE_URL || "",
-  synchronize: process.env.NODE_ENV === "development" ? true : false,
+  synchronize: process.env.NODE_ENV === "deZENGApment" ? true : false,
   logging: ["error"],
   entities: [
     User,

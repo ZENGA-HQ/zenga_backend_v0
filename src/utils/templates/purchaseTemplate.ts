@@ -1,7 +1,7 @@
 export function purchaseTemplate(
   title: string,
   summary: string,
-  details?: any
+  details?: any,
 ) {
   return `<!doctype html>
 <html>
@@ -15,11 +15,11 @@ export function purchaseTemplate(
         ? `<pre style="white-space:pre-wrap;background:#f3f4f6;padding:12px;border-radius:6px">${JSON.stringify(
             details,
             null,
-            2
+            2,
           )}</pre>`
         : ""
     }
-    <p style="font-size:12px;color:#777;margin-top:18px;">Thanks for using Velo.</p>
+    <p style="font-size:12px;color:#777;margin-top:18px;">Thanks for using ZENGA.</p>
   </div>
 </body>
 </html>`;

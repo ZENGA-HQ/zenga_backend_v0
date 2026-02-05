@@ -16,14 +16,14 @@ export class Company {
   @PrimaryGeneratedColumn("uuid")
   id: string | undefined;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', default: 'New Company' })
   companyName!: string;
 
-  @Column({ type: 'text', unique: true })
-  companyEmail!: string;
+  @Column({ type: 'text', unique: true, nullable: true })
+  companyEmail?: string;
 
-  @Column({ type: 'text', unique: true })
-  companyCode!: string;
+  @Column({ type: 'text', unique: true, nullable: true })
+  companyCode?: string;
 
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
@@ -54,7 +54,7 @@ export class Company {
     const bytes = randomBytes(8);
 
     for (let i = 0; i < 8; i++) {
-      code += chars[bytes[i]! % chars.length];
+      code += chars[bytes[i] % chars.length];
     }
 
     return code;

@@ -1,5 +1,14 @@
 // Generate and deploy a real ArgentX account (Starknet)
-
+// Add these imports at the top of keygen.ts
+import { Keypair as StellarKeypair } from '@stellar/stellar-sdk';
+import { 
+  cryptoWaitReady, 
+  mnemonicGenerate, 
+  mnemonicToMiniSecret, 
+  encodeAddress, 
+  decodeAddress 
+} from '@polkadot/util-crypto';
+import { Keyring } from '@polkadot/keyring';
 import { Wallet as EthWallet } from "ethers";
 import * as bitcoin from "bitcoinjs-lib";
 import * as ecc from "tiny-secp256k1";
@@ -38,7 +47,7 @@ interface GeneratedWallet {
 
 const ENCRYPTION_KEY =
   process.env.ENCRYPTION_KEY?.padEnd(32, "0").slice(0, 32) ||
-  "velo_default_32_byte_key_123456789012"; // fallback string
+  "ZENGA_default_32_byte_key_123456789012"; // fallback string
 const ALGORITHM = "aes-256-cbc";
 
 // Derive a fixed 32-byte key from the ENCRYPTION_KEY using SHA-256.
@@ -159,13 +168,24 @@ export function generateStellarWallet() {
   // Prefer `stellar-sdk` Keypair if available (returns StrKey encoded values).
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Keypair: StellarKeypair } = require("stellar-sdk");
+    // const { Keypair: StellarKeypair } = require("@stellar/stellar-sdk");
     const pair = StellarKeypair.random();
     return {
       mainnet: { address: pair.publicKey(), privateKey: pair.secret() },
       testnet: { address: pair.publicKey(), privateKey: pair.secret() },
     };
   } catch (err) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // const { Keypair: StellarKeypair } = require("stellar-sdk");
+      const pair = StellarKeypair.random();
+      return {
+        mainnet: { address: pair.publicKey(), privateKey: pair.secret() },
+        testnet: { address: pair.publicKey(), privateKey: pair.secret() },
+      };
+    } catch (errLegacy) {
+      // Fall through to manual fallback
+    }
     // Fallback: generate ed25519 keys and encode to Stellar StrKey format
     // without adding external deps. This implements the minimal StrKey
     // encoder (version byte + payload + CRC16-XModem) + base32.
@@ -269,23 +289,17 @@ export function generateStellarWallet() {
   }
 }
 
+
 export async function generatePolkadotWallet() {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const polka = require("@polkadot/util-crypto");
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Keyring } = require("@polkadot/keyring");
-
     // Ensure WASM crypto initialized
-    if (polka.cryptoWaitReady) {
-      await polka.cryptoWaitReady();
-    }
+    await cryptoWaitReady();
 
-    // Generate mnemonic (12 or 24 words - standard is 12)
-    const mnemonic = polka.mnemonicGenerate(12);
+    // Generate mnemonic (12 words)
+    const mnemonic = mnemonicGenerate(12);
 
     // Generate seed from mnemonic
-    const seed = polka.mnemonicToMiniSecret(mnemonic);
+    const seed = mnemonicToMiniSecret(mnemonic);
 
     // Create keyring with sr25519 (Polkadot standard)
     const keyring = new Keyring({ type: "sr25519", ss58Format: 0 });
@@ -294,21 +308,18 @@ export async function generatePolkadotWallet() {
     // Get the public key
     const publicKey = pair.publicKey;
 
-    // CRITICAL FIX: Paseo uses format 0 (same as Polkadot mainnet)
-    // Not format 42 (generic Substrate)
-    const mainnetAddress = polka.encodeAddress(publicKey, 0); // Polkadot mainnet
-    const paseoAddress = polka.encodeAddress(publicKey, 0); // Paseo testnet (uses format 0!)
+    // Both mainnet and testnet use format 0
+    const mainnetAddress = encodeAddress(publicKey, 0);
+    const paseoAddress = encodeAddress(publicKey, 0);
 
     // Store complete key information
-    // IMPORTANT: Store mnemonic for full recovery capability
     const privateKeyData = {
       seed: Buffer.from(seed).toString("hex"),
-      mnemonic: mnemonic, // CRITICAL: This is what you need for recovery!
-      type: "sr25519", // Algorithm type
+      mnemonic: mnemonic, // CRITICAL for recovery
+      type: "sr25519",
       publicKey: Buffer.from(publicKey).toString("hex"),
     };
 
-    // Serialize for database storage
     const privateKey = JSON.stringify(privateKeyData);
 
     return {
@@ -319,16 +330,16 @@ export async function generatePolkadotWallet() {
         format: 0,
       },
       testnet: {
-        address: paseoAddress, // Same as mainnet address (format 0)
+        address: paseoAddress,
         privateKey: privateKey,
         network: "paseo",
-        format: 0, // Paseo uses format 0, not 42!
+        format: 0,
       },
-      mnemonic, // Return for backup
+      mnemonic,
       publicKey: Buffer.from(publicKey).toString("hex"),
     };
   } catch (err) {
-    console.warn("Polkadot wallet generation error:", err);
+    console.error("Polkadot wallet generation error:", err);
     return {
       mainnet: { address: "", privateKey: "", network: "", format: 0 },
       testnet: { address: "", privateKey: "", network: "", format: 0 },
@@ -343,21 +354,15 @@ export async function generatePolkadotWallet() {
  */
 export async function recoverPolkadotWallet(privateKeyJson: string) {
   try {
-    const polka = require("@polkadot/util-crypto");
-    const { Keyring } = require("@polkadot/keyring");
-
-    await polka.cryptoWaitReady();
-
+    await cryptoWaitReady();
     const keyData = JSON.parse(privateKeyJson);
 
-    // Recover from mnemonic (best practice)
     if (keyData.mnemonic) {
-      const seed = polka.mnemonicToMiniSecret(keyData.mnemonic);
+      const seed = mnemonicToMiniSecret(keyData.mnemonic);
       const keyring = new Keyring({ type: keyData.type || "sr25519" });
       return keyring.addFromSeed(seed);
     }
 
-    // Fallback: recover from seed
     if (keyData.seed) {
       const seedBuffer = Buffer.from(keyData.seed, "hex");
       const keyring = new Keyring({ type: keyData.type || "sr25519" });
@@ -376,15 +381,12 @@ export async function recoverPolkadotWallet(privateKeyJson: string) {
  */
 export function validatePaseoAddress(address: string): boolean {
   try {
-    const polka = require("@polkadot/util-crypto");
-    const decoded = polka.decodeAddress(address);
-    // Paseo uses format 0, same as Polkadot mainnet
+    const decoded = decodeAddress(address);
     return decoded && decoded.length === 32;
   } catch {
     return false;
   }
 }
-
 /**
  * Generate Starknet wallet for both mainnet and testnet
  */

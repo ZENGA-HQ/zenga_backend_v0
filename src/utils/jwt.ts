@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { JWTPayload } from '../types';
 
-// Validate JWT secrets early and provide safe defaults in development.
+// Validate JWT secrets early and provide safe defaults in deZENGApment.
 let JWT_SECRET = process.env.JWT_SECRET;
 let JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
@@ -11,7 +11,7 @@ if (!JWT_SECRET) {
         process.exit(1);
     }
     JWT_SECRET = 'dev_jwt_secret_change_me';
-    console.warn('Warning: JWT_SECRET not set, using development fallback. Set JWT_SECRET in .env for production');
+    console.warn('Warning: JWT_SECRET not set, using deZENGApment fallback. Set JWT_SECRET in .env for production');
 }
 
 if (!JWT_REFRESH_SECRET) {
@@ -20,7 +20,7 @@ if (!JWT_REFRESH_SECRET) {
         process.exit(1);
     }
     JWT_REFRESH_SECRET = 'dev_jwt_refresh_secret_change_me';
-    console.warn('Warning: JWT_REFRESH_SECRET not set, using development fallback. Set JWT_REFRESH_SECRET in .env for production');
+    console.warn('Warning: JWT_REFRESH_SECRET not set, using deZENGApment fallback. Set JWT_REFRESH_SECRET in .env for production');
 }
 
 export const generateAccessToken = (payload: JWTPayload): string => {

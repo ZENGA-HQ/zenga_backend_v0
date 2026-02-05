@@ -114,7 +114,7 @@ export class NotificationService {
             userId,
             NotificationType.LOGIN,
             'Login Successful',
-            'You have successfully logged into your Velo account.',
+            'You have successfully logged into your ZENGA account.',
             details
         );
     }
@@ -130,7 +130,7 @@ export class NotificationService {
             userId,
             NotificationType.LOGOUT,
             'Logout Successful',
-            'You have successfully logged out of your Velo account.',
+            'You have successfully logged out of your ZENGA account.',
             details
         );
     }
@@ -142,11 +142,15 @@ export class NotificationService {
         userId: string,
         details?: any
     ): Promise<Notification> {
+        const otpSnippet = details?.otp
+            ? ` Your verification code is ${details.otp}.`
+            : '';
         return this.createNotification(
             userId,
             NotificationType.REGISTRATION,
-            'Welcome to Velo!',
-            'Your account has been successfully created. Welcome to the Velo multi-chain wallet!',
+            'Welcome to ZENGA!',
+            `Your account has been successfully created. Welcome to the Zenga!
+            Your OTP is ${otpSnippet}`,
             details
         );
     }

@@ -60,7 +60,7 @@ export class PaystackController {
 
       // Generate unique reference
       const randomId = crypto.randomBytes(4).toString("hex");
-      const paymentRef = `VELO_REF_${Date.now()}_${randomId}`;
+      const paymentRef = `ZENGA_REF_${Date.now()}_${randomId}`;
 
       const fees = calculateTotalCharge(Number(amount));
 

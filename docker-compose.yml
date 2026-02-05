@@ -27,7 +27,7 @@ services:
     ports:
       - "5500:5500"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=deZENGApment
       - PORT=5500
     env_file:
       - .env

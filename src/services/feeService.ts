@@ -1,9 +1,9 @@
 /**
- * VELO Fee Service
+ * ZENGA Fee Service
  * Implements the Normal Transaction Model
  * 
  * Fee Tiers:
- * - $0 - $10: $0.00 (no VELO fee)
+ * - $0 - $10: $0.00 (no ZENGA fee)
  * - $10.01 - $50: $0.10
  * - $51 - $100: $0.25
  * - $101 - $500: $1.00
@@ -30,15 +30,15 @@ export interface FeeTier {
 }
 
 export class FeeService {
-    // Fee tiers based on VELO business model
+    // Fee tiers based on ZENGA business model
     private static readonly FEE_TIERS: FeeTier[] = [
-        // Waive VELO fee for very small transactions: $0.00 - $10.00
+        // Waive ZENGA fee for very small transactions: $0.00 - $10.00
         {
             min: 0,
             max: 10,
             fee: 0.00,
             percentage: null,
-            description: 'No VELO fee for micro transactions up to $10'
+            description: 'No ZENGA fee for micro transactions up to $10'
         },
         {
             min: 10.01,
@@ -260,7 +260,7 @@ export class FeeService {
 
     /**
      * Get minimum transaction amount (where fee doesn't exceed amount)
-     * For VELO, minimum is $0.10 fee for $0-$50 range
+     * For ZENGA, minimum is $0.10 fee for $0-$50 range
      * @returns minimum transaction amount
      */
     static getMinimumTransactionAmount(): number {

@@ -21,7 +21,7 @@ export function logoutNotificationTemplate(name: string) {
       <p>Hello ${name},</p><p>Your account was just logged out. If this wasn't you, please contact support or reset your password immediately.</p>
     </div>
     <div style="margin-top:32px; font-size:12px; color:#888; text-align:center;">
-      &copy; 2025 Velo. All rights reserved.
+      &copy; 2025 ZENGA. All rights reserved.
     </div>
   </div>
 </body>

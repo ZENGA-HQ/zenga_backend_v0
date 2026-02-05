@@ -80,315 +80,687 @@ export class AuthController {
    * - (Email sending is commented out, but logs OTP to console.)
    * - Returns the user ID and addresses (without private keys).
    */
-  static async register(req: Request, res: Response): Promise<void> {
-    try {
-      const { email, password, userType, companyName, companyCode } = req.body;
+  // static async register(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const { email, password, userType, companyName, companyCode } = req.body;
 
-      // Generate OTP early to ensure it's saved with the user
-      const otp = generateOTP();
-      const otpExpiry = getOTPExpiry();
+  //     // Generate OTP early to ensure it's saved with the user
+  //     const otp = generateOTP();
+  //     const otpExpiry = getOTPExpiry();
 
-      let targetUserType = UserType.INDIVIDUAL;
-      let companyId: string | undefined;
+  //     let targetUserType = UserType.INDIVIDUAL;
+  //     let companyId: string | undefined;
 
-      console.log(
-        `[DEBUG] Registration started for: ${email}, type: ${userType}`,
-      );
+  //     console.log(
+  //       `[DEBUG] Registration started for: ${email}, type: ${userType}`,
+  //     );
 
-      let companyCodeValue: string | undefined;
-      if (userType === "company") {
-        if (!companyName) {
-          res.status(400).json({ error: "Company name is required" });
-          return;
-        }
-        targetUserType = UserType.COMPANY;
+  //     let companyCodeValue: string | undefined;
+  //     if (userType === "company") {
+  //       if (!companyName) {
+  //         res.status(400).json({ error: "Company name is required" });
+  //         return;
+  //       }
+  //       targetUserType = UserType.COMPANY;
 
-        // Create the company
-        console.log(`[DEBUG] Creating company: ${companyName}`);
-        const companyRepo = AppDataSource.getRepository(Company);
-        const company = companyRepo.create({
-          companyName,
-          companyEmail: email, // Default to user email
-        });
-        await companyRepo.save(company);
-        companyId = company.id;
-        companyCodeValue = company.companyCode;
-        console.log(
-          `[DEBUG] Company created with ID: ${companyId}, Code: ${company.companyCode}`,
-        );
-      } else if (userType === "employee") {
-        if (!companyCode) {
-          res.status(400).json({ error: "Company code is required" });
-          return;
-        }
-        targetUserType = UserType.EMPLOYEE;
+  //       // Create the company
+  //       console.log(`[DEBUG] Creating company: ${companyName}`);
+  //       const companyRepo = AppDataSource.getRepository(Company);
+  //       const company = companyRepo.create({
+  //         companyName,
+  //         companyEmail: email, // Default to user email
+  //       });
+  //       await companyRepo.save(company);
+  //       companyId = company.id;
+  //       companyCodeValue = company.companyCode;
+  //       console.log(
+  //         `[DEBUG] Company created with ID: ${companyId}, Code: ${company.companyCode}`,
+  //       );
+  //     } else if (userType === "employee") {
+  //       if (!companyCode) {
+  //         res.status(400).json({ error: "Company code is required" });
+  //         return;
+  //       }
+  //       targetUserType = UserType.EMPLOYEE;
 
-        // Find the company by code
-        console.log(`[DEBUG] Finding company for code: ${companyCode}`);
-        const companyRepo = AppDataSource.getRepository(Company);
-        const company = await companyRepo.findOne({ where: { companyCode } });
-        if (!company) {
-          res.status(404).json({ error: "Invalid company code" });
-          return;
-        }
-        companyId = company.id;
-        console.log(
-          `[DEBUG] Found company: ${company.companyName} with ID: ${companyId}`,
-        );
-      }
+  //       // Find the company by code
+  //       console.log(`[DEBUG] Finding company for code: ${companyCode}`);
+  //       const companyRepo = AppDataSource.getRepository(Company);
+  //       const company = await companyRepo.findOne({ where: { companyCode } });
+  //       if (!company) {
+  //         res.status(404).json({ error: "Invalid company code" });
+  //         return;
+  //       }
+  //       companyId = company.id;
+  //       console.log(
+  //         `[DEBUG] Found company: ${company.companyName} with ID: ${companyId}`,
+  //       );
+  //     }
 
-      // Create user if not exists with OTP pre-populated
-      console.log(`[DEBUG] Creating user: ${email}`);
-      const user = await createUserIfNotExists(
-        email,
-        password,
-        targetUserType,
-        companyId,
-        otp,
-        otpExpiry,
-      );
-      if (!user) {
-        console.log(
-          `[DEBUG] Registration failed: User ${email} already exists`,
-        );
-        res.status(409).json({ error: "User already exists" });
+  //     // Create user if not exists with OTP pre-populated
+  //     console.log(`[DEBUG] Creating user: ${email}`);
+  //     const user = await createUserIfNotExists(
+  //       email,
+  //       password,
+  //       targetUserType,
+  //       companyId,
+  //       otp,
+  //       otpExpiry,
+  //     );
+  //     if (!user) {
+  //       console.log(
+  //         `[DEBUG] Registration failed: User ${email} already exists`,
+  //       );
+  //       res.status(409).json({ error: "User already exists" });
+  //       return;
+  //     }
+  //     console.log(`[DEBUG] User created with ID: ${user.id}, OTP: ${otp}`);
+
+  //     // Generate all wallets directly
+  //     console.log(`[DEBUG] Generating wallets for: ${user.id}`);
+  //     const eth = generateEthWallet();
+  //     const btc = generateBtcWallet();
+  //     const sol = generateSolWallet();
+  //     const stellar = generateStellarWallet();
+  //     const polkadot = await generatePolkadotWallet();
+  //     const strk = generateStrkWallet();
+  //     const usdcWallets = generateUsdcWallet();
+
+  //     // For USDT, we'll use the same addresses as ETH (since USDT-ERC20 uses Ethereum addresses)
+  //     // and generate separate Tron addresses for USDT-TRC20
+  //     const tron = generateEthWallet(); // Tron uses similar address generation
+
+  //     // Prepare addresses array for saving and response
+  //     const fullAddresses = [
+  //       {
+  //         chain: "ethereum",
+  //         network: "mainnet",
+  //         address: eth.mainnet.address,
+  //         encryptedPrivateKey: encrypt(eth.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "ethereum",
+  //         network: "testnet",
+  //         address: eth.testnet.address,
+  //         encryptedPrivateKey: encrypt(eth.testnet.privateKey),
+  //       },
+  //       {
+  //         chain: "bitcoin",
+  //         network: "mainnet",
+  //         address: btc.mainnet.address,
+  //         encryptedPrivateKey: encrypt(btc.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "bitcoin",
+  //         network: "testnet",
+  //         address: btc.testnet.address,
+  //         encryptedPrivateKey: encrypt(btc.testnet.privateKey),
+  //       },
+  //       {
+  //         chain: "solana",
+  //         network: "mainnet",
+  //         address: sol.mainnet.address,
+  //         encryptedPrivateKey: encrypt(sol.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "solana",
+  //         network: "testnet",
+  //         address: sol.testnet.address,
+  //         encryptedPrivateKey: encrypt(sol.testnet.privateKey),
+  //       },
+  //       {
+  //         chain: "starknet",
+  //         network: "mainnet",
+  //         address: strk.mainnet.address,
+  //         encryptedPrivateKey: encrypt(strk.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "starknet",
+  //         network: "testnet",
+  //         address: strk.testnet.address,
+  //         encryptedPrivateKey: encrypt(strk.testnet.privateKey),
+  //       },
+  //       // USDT addresses - using ETH addresses for ERC-20 USDT
+  //       {
+  //         chain: "usdt_erc20",
+  //         network: "mainnet",
+  //         address: eth.mainnet.address, // Same as ETH mainnet
+  //         encryptedPrivateKey: encrypt(eth.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "usdt_erc20",
+  //         network: "testnet",
+  //         address: eth.testnet.address, // Same as ETH testnet
+  //         encryptedPrivateKey: encrypt(eth.testnet.privateKey),
+  //       },
+  //       // USDT TRC-20 addresses (Tron network)
+  //       {
+  //         chain: "usdt_trc20",
+  //         network: "mainnet",
+  //         address: tron.mainnet.address,
+  //         encryptedPrivateKey: encrypt(tron.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "usdt_trc20",
+  //         network: "testnet",
+  //         address: tron.testnet.address,
+  //         encryptedPrivateKey: encrypt(tron.testnet.privateKey),
+  //       },
+  //       // Stellar
+  //       {
+  //         chain: "stellar",
+  //         network: "mainnet",
+  //         address: stellar.mainnet.address,
+  //         encryptedPrivateKey: encrypt(stellar.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "stellar",
+  //         network: "testnet",
+  //         address: stellar.testnet.address,
+  //         encryptedPrivateKey: encrypt(stellar.testnet.privateKey),
+  //       },
+  //       // Polkadot
+  //       {
+  //         chain: "polkadot",
+  //         network: "mainnet",
+  //         address: polkadot.mainnet.address,
+  //         encryptedPrivateKey: encrypt(polkadot.mainnet.privateKey),
+  //       },
+  //       {
+  //         chain: "polkadot",
+  //         network: "testnet",
+  //         address: polkadot.testnet.address,
+  //         encryptedPrivateKey: encrypt(polkadot.testnet.privateKey),
+  //       },
+  //       {
+  //         chain: "usdc-evm", // All EVM chains use the same address for USDC (ERC-20)
+  //         network: "mainnet",
+  //         address: usdcWallets.evm.address,
+  //         encryptedPrivateKey: encrypt(usdcWallets.evm.privateKey),
+  //         note: "USDC on Ethereum, Arbitrum, Base, Optimism, Polygon, Linea, Scroll, zkSync Era, Avalanche, Mantle, etc.",
+  //       },
+  //       {
+  //         chain: "usdc-solana",
+  //         network: "mainnet",
+  //         address: usdcWallets.solana.address,
+  //         encryptedPrivateKey: encrypt(usdcWallets.solana.privateKey),
+  //         note: "USDC (SPL) on Solana - ATA created automatically on receive",
+  //       },
+  //       {
+  //         chain: "usdc-starknet",
+  //         network: "mainnet",
+  //         address: usdcWallets.starknet.address,
+  //         encryptedPrivateKey: encrypt(usdcWallets.starknet.privateKey),
+  //         note: "USDC on Starknet - requires account deployment if new",
+  //       },
+  //     ];
+
+  //     // Save all generated addresses to the database directly
+  //     console.log(
+  //       `[DEBUG] Saving ${fullAddresses.length} addresses for user: ${user.id}`,
+  //     );
+  //     const addressRepo = AppDataSource.getRepository(UserAddress);
+  //     for (const addr of fullAddresses) {
+  //       try {
+  //         await addressRepo.save({
+  //           address: addr.address,
+  //           encryptedPrivateKey: addr.encryptedPrivateKey,
+  //           user,
+  //           userId: user.id!,
+  //           chain:
+  //             ChainType[addr.chain.toUpperCase() as keyof typeof ChainType],
+  //           network:
+  //             NetworkType[
+  //             addr.network.toUpperCase() as keyof typeof NetworkType
+  //             ],
+  //         });
+  //         console.log("[DEBUG] Saved address:", {
+  //           ...addr,
+  //           userId: user.id,
+  //         });
+  //       } catch (err) {
+  //         console.error(`[DEBUG] Failed to save address ${addr.chain}:`, err);
+  //       }
+  //     }
+
+  //     // Generate and save OTP for email verification
+  //     // OTP is now generated and saved with the user during createUserIfNotExists
+  //     // const otp = generateOTP();
+  //     // user.emailOTP = otp;
+  //     // user.emailOTPExpiry = getOTPExpiry();
+  //     // await AppDataSource.getRepository(User).save(user);
+
+  //     console.log(`\n========================================`);
+  //     console.log(`📧 REGISTRATION OTP`);
+  //     console.log(`Email: ${email}`);
+  //     console.log(`OTP Code: ${otp}`);
+  //     console.log(`Expires: ${otpExpiry.toISOString()}`);
+  //     console.log(`========================================\n`);
+
+  //     // Send registration verification email and OTP (temporarily disabled)
+  //     // await sendRegistrationEmails(email, otp);
+
+  //     // Create registration notification
+  //     try {
+  //       if (user.id) {
+  //         await NotificationService.notifyRegistration(user.id, {
+  //           email,
+  //           registrationDate: new Date(),
+  //           addressCount: fullAddresses.length,
+  //         });
+  //         console.log(
+  //           "[DEBUG] Registration notification created for user:",
+  //           user.id,
+  //         );
+  //       }
+  //     } catch (notificationError) {
+  //       console.error(
+  //         "[DEBUG] Failed to create registration notification:",
+  //         notificationError,
+  //       );
+  //       // Don't fail registration if notification fails
+  //     }
+
+  //     // Return user profile with addresses (no private keys)
+  //     const userAddresses = fullAddresses.map((a: any) => ({
+  //       chain: AuthController.mapChainName(a.chain),
+  //       network: a.network,
+  //       address: a.address,
+  //     }));
+  //     // Sort addresses before sending
+  //     const sortedAddresses = AuthController.sortAddresses(userAddresses);
+
+  //     // Always log sorted addresses for debugging
+  //     console.log(
+  //       "[DEBUG] Sorted addresses:",
+  //       JSON.stringify(sortedAddresses, null, 2),
+  //     );
+
+  //     res.status(201).json({
+  //       message: "User registered successfully. Please verify your email.",
+  //       userId: user.id,
+  //       role: targetUserType,
+  //       companyName: companyName, // Added this
+  //       companyCode: companyCodeValue,
+  //       addresses: sortedAddresses,
+  //       ...(process.env.NODE_ENV !== "production" ? { otp } : {}),
+  //     });
+  //   } catch (error) {
+  //     console.error("Registration error:", error);
+  //     res.status(500).json({ error: "Internal server error" });
+  //   }
+  // }
+
+  // PATCHED REGISTER METHOD - Enhanced Debugging for Stellar/Polkadot Issue
+// Replace the register method in AuthController with this version
+
+static async register(req: Request, res: Response): Promise<void> {
+  try {
+    const { email, password, userType, companyName, companyCode } = req.body;
+
+    // Generate OTP early to ensure it's saved with the user
+    const otp = generateOTP();
+    const otpExpiry = getOTPExpiry();
+
+    let targetUserType = UserType.INDIVIDUAL;
+    let companyId: string | undefined;
+
+    console.log(
+      `[DEBUG] Registration started for: ${email}, type: ${userType}`,
+    );
+
+    let companyCodeValue: string | undefined;
+    if (userType === "company") {
+      if (!companyName) {
+        res.status(400).json({ error: "Company name is required" });
         return;
       }
-      console.log(`[DEBUG] User created with ID: ${user.id}, OTP: ${otp}`);
+      targetUserType = UserType.COMPANY;
 
-      // Generate all wallets directly
-      console.log(`[DEBUG] Generating wallets for: ${user.id}`);
-      const eth = generateEthWallet();
-      const btc = generateBtcWallet();
-      const sol = generateSolWallet();
-      const stellar = generateStellarWallet();
-      const polkadot = await generatePolkadotWallet();
-      const strk = generateStrkWallet();
-      const usdcWallets = generateUsdcWallet();
-
-      // For USDT, we'll use the same addresses as ETH (since USDT-ERC20 uses Ethereum addresses)
-      // and generate separate Tron addresses for USDT-TRC20
-      const tron = generateEthWallet(); // Tron uses similar address generation
-
-      // Prepare addresses array for saving and response
-      const fullAddresses = [
-        {
-          chain: "ethereum",
-          network: "mainnet",
-          address: eth.mainnet.address,
-          encryptedPrivateKey: encrypt(eth.mainnet.privateKey),
-        },
-        {
-          chain: "ethereum",
-          network: "testnet",
-          address: eth.testnet.address,
-          encryptedPrivateKey: encrypt(eth.testnet.privateKey),
-        },
-        {
-          chain: "bitcoin",
-          network: "mainnet",
-          address: btc.mainnet.address,
-          encryptedPrivateKey: encrypt(btc.mainnet.privateKey),
-        },
-        {
-          chain: "bitcoin",
-          network: "testnet",
-          address: btc.testnet.address,
-          encryptedPrivateKey: encrypt(btc.testnet.privateKey),
-        },
-        {
-          chain: "solana",
-          network: "mainnet",
-          address: sol.mainnet.address,
-          encryptedPrivateKey: encrypt(sol.mainnet.privateKey),
-        },
-        {
-          chain: "solana",
-          network: "testnet",
-          address: sol.testnet.address,
-          encryptedPrivateKey: encrypt(sol.testnet.privateKey),
-        },
-        {
-          chain: "starknet",
-          network: "mainnet",
-          address: strk.mainnet.address,
-          encryptedPrivateKey: encrypt(strk.mainnet.privateKey),
-        },
-        {
-          chain: "starknet",
-          network: "testnet",
-          address: strk.testnet.address,
-          encryptedPrivateKey: encrypt(strk.testnet.privateKey),
-        },
-        // USDT addresses - using ETH addresses for ERC-20 USDT
-        {
-          chain: "usdt_erc20",
-          network: "mainnet",
-          address: eth.mainnet.address, // Same as ETH mainnet
-          encryptedPrivateKey: encrypt(eth.mainnet.privateKey),
-        },
-        {
-          chain: "usdt_erc20",
-          network: "testnet",
-          address: eth.testnet.address, // Same as ETH testnet
-          encryptedPrivateKey: encrypt(eth.testnet.privateKey),
-        },
-        // USDT TRC-20 addresses (Tron network)
-        {
-          chain: "usdt_trc20",
-          network: "mainnet",
-          address: tron.mainnet.address,
-          encryptedPrivateKey: encrypt(tron.mainnet.privateKey),
-        },
-        {
-          chain: "usdt_trc20",
-          network: "testnet",
-          address: tron.testnet.address,
-          encryptedPrivateKey: encrypt(tron.testnet.privateKey),
-        },
-        // Stellar
-        {
-          chain: "stellar",
-          network: "mainnet",
-          address: stellar.mainnet.address,
-          encryptedPrivateKey: encrypt(stellar.mainnet.privateKey),
-        },
-        {
-          chain: "stellar",
-          network: "testnet",
-          address: stellar.testnet.address,
-          encryptedPrivateKey: encrypt(stellar.testnet.privateKey),
-        },
-        // Polkadot
-        {
-          chain: "polkadot",
-          network: "mainnet",
-          address: polkadot.mainnet.address,
-          encryptedPrivateKey: encrypt(polkadot.mainnet.privateKey),
-        },
-        {
-          chain: "polkadot",
-          network: "testnet",
-          address: polkadot.testnet.address,
-          encryptedPrivateKey: encrypt(polkadot.testnet.privateKey),
-        },
-        {
-          chain: "usdc-evm", // All EVM chains use the same address for USDC (ERC-20)
-          network: "mainnet",
-          address: usdcWallets.evm.address,
-          encryptedPrivateKey: encrypt(usdcWallets.evm.privateKey),
-          note: "USDC on Ethereum, Arbitrum, Base, Optimism, Polygon, Linea, Scroll, zkSync Era, Avalanche, Mantle, etc.",
-        },
-        {
-          chain: "usdc-solana",
-          network: "mainnet",
-          address: usdcWallets.solana.address,
-          encryptedPrivateKey: encrypt(usdcWallets.solana.privateKey),
-          note: "USDC (SPL) on Solana - ATA created automatically on receive",
-        },
-        {
-          chain: "usdc-starknet",
-          network: "mainnet",
-          address: usdcWallets.starknet.address,
-          encryptedPrivateKey: encrypt(usdcWallets.starknet.privateKey),
-          note: "USDC on Starknet - requires account deployment if new",
-        },
-      ];
-
-      // Save all generated addresses to the database directly
+      const companyRepo = AppDataSource.getRepository(Company);
+      const company = companyRepo.create({
+        companyName,
+        companyEmail: email,
+      });
+      await companyRepo.save(company);
+      companyId = company.id;
+      companyCodeValue = company.companyCode;
       console.log(
-        `[DEBUG] Saving ${fullAddresses.length} addresses for user: ${user.id}`,
+        `[DEBUG] Company created with ID: ${companyId}, Code: ${company.companyCode}`,
       );
-      const addressRepo = AppDataSource.getRepository(UserAddress);
-      for (const addr of fullAddresses) {
-        try {
-          await addressRepo.save({
-            address: addr.address,
-            encryptedPrivateKey: addr.encryptedPrivateKey,
-            user,
-            userId: user.id!,
-            chain:
-              ChainType[addr.chain.toUpperCase() as keyof typeof ChainType],
-            network:
-              NetworkType[
-              addr.network.toUpperCase() as keyof typeof NetworkType
-              ],
-          });
-          console.log("[DEBUG] Saved address:", {
-            ...addr,
-            userId: user.id,
-          });
-        } catch (err) {
-          console.error(`[DEBUG] Failed to save address ${addr.chain}:`, err);
-        }
+    } else if (userType === "employee") {
+      if (!companyCode) {
+        res.status(400).json({ error: "Company code is required" });
+        return;
       }
+      targetUserType = UserType.EMPLOYEE;
 
-      // Generate and save OTP for email verification
-      // OTP is now generated and saved with the user during createUserIfNotExists
-      // const otp = generateOTP();
-      // user.emailOTP = otp;
-      // user.emailOTPExpiry = getOTPExpiry();
-      // await AppDataSource.getRepository(User).save(user);
+      const companyRepo = AppDataSource.getRepository(Company);
+      const company = await companyRepo.findOne({ where: { companyCode } });
+      if (!company) {
+        res.status(404).json({ error: "Invalid company code" });
+        return;
+      }
+      companyId = company.id;
+      console.log(
+        `[DEBUG] Found company: ${company.companyName} with ID: ${companyId}`,
+      );
+    }
 
-      console.log(`\n========================================`);
-      console.log(`📧 REGISTRATION OTP`);
-      console.log(`Email: ${email}`);
-      console.log(`OTP Code: ${otp}`);
-      console.log(`Expires: ${otpExpiry.toISOString()}`);
-      console.log(`========================================\n`);
+    // Create user if not exists with OTP pre-populated
+    console.log(`[DEBUG] Creating user: ${email}`);
+    const user = await createUserIfNotExists(
+      email,
+      password,
+      targetUserType,
+      companyId,
+      otp,
+      otpExpiry,
+    );
+    if (!user) {
+      console.log(
+        `[DEBUG] Registration failed: User ${email} already exists`,
+      );
+      res.status(409).json({ error: "User already exists" });
+      return;
+    }
+    console.log(`[DEBUG] User created with ID: ${user.id}, OTP: ${otp}`);
 
-      // Send registration verification email and OTP
-      await sendRegistrationEmails(email, otp);
+    // ===== ENHANCED WALLET GENERATION WITH VALIDATION =====
+    console.log(`[DEBUG] Generating wallets for: ${user.id}`);
+    
+    const eth = generateEthWallet();
+    console.log('[DEBUG] ✅ ETH wallet generated:', eth.mainnet.address);
+    
+    const btc = generateBtcWallet();
+    console.log('[DEBUG] ✅ BTC wallet generated:', btc.mainnet.address);
+    
+    const sol = generateSolWallet();
+    console.log('[DEBUG] ✅ SOL wallet generated:', sol.mainnet.address);
+    
+    // CRITICAL: Test Stellar generation
+    const stellar = generateStellarWallet();
+    console.log('[DEBUG] Stellar wallet generation result:', {
+      mainnetAddress: stellar.mainnet.address,
+      testnetAddress: stellar.testnet.address,
+      hasMainnetAddress: !!stellar.mainnet.address,
+      hasPrivateKey: !!stellar.mainnet.privateKey,
+      addressLength: stellar.mainnet.address?.length || 0
+    });
+    
+    if (!stellar.mainnet.address) {
+      console.error('[ERROR] ❌ Stellar wallet generation FAILED - empty address!');
+      console.error('[ERROR] Please install: npm install @stellar/stellar-sdk');
+    } else {
+      console.log('[DEBUG] ✅ Stellar wallet generated:', stellar.mainnet.address);
+    }
+    
+    // CRITICAL: Test Polkadot generation
+    const polkadot = await generatePolkadotWallet();
+    console.log('[DEBUG] Polkadot wallet generation result:', {
+      mainnetAddress: polkadot.mainnet.address,
+      testnetAddress: polkadot.testnet.address,
+      hasMainnetAddress: !!polkadot.mainnet.address,
+      hasPrivateKey: !!polkadot.mainnet.privateKey,
+      mnemonic: polkadot.mnemonic ? '[PRESENT]' : '[MISSING]',
+      addressLength: polkadot.mainnet.address?.length || 0
+    });
+    
+    if (!polkadot.mainnet.address) {
+      console.error('[ERROR] ❌ Polkadot wallet generation FAILED - empty address!');
+      console.error('[ERROR] Please install: npm install @polkadot/util-crypto @polkadot/keyring');
+    } else {
+      console.log('[DEBUG] ✅ Polkadot wallet generated:', polkadot.mainnet.address);
+    }
+    
+    const strk = generateStrkWallet();
+    console.log('[DEBUG] ✅ STRK wallet generated:', strk.mainnet.address);
+    
+    const usdcWallets = generateUsdcWallet();
+    console.log('[DEBUG] ✅ USDC wallets generated');
+    
+    const tron = generateEthWallet();
+    console.log('[DEBUG] ✅ Tron wallet generated');
 
-      // Create registration notification
+    // Prepare addresses array for saving and response
+    const fullAddresses = [
+      {
+        chain: "ethereum",
+        network: "mainnet",
+        address: eth.mainnet.address,
+        encryptedPrivateKey: encrypt(eth.mainnet.privateKey),
+      },
+      {
+        chain: "ethereum",
+        network: "testnet",
+        address: eth.testnet.address,
+        encryptedPrivateKey: encrypt(eth.testnet.privateKey),
+      },
+      {
+        chain: "bitcoin",
+        network: "mainnet",
+        address: btc.mainnet.address,
+        encryptedPrivateKey: encrypt(btc.mainnet.privateKey),
+      },
+      {
+        chain: "bitcoin",
+        network: "testnet",
+        address: btc.testnet.address,
+        encryptedPrivateKey: encrypt(btc.testnet.privateKey),
+      },
+      {
+        chain: "solana",
+        network: "mainnet",
+        address: sol.mainnet.address,
+        encryptedPrivateKey: encrypt(sol.mainnet.privateKey),
+      },
+      {
+        chain: "solana",
+        network: "testnet",
+        address: sol.testnet.address,
+        encryptedPrivateKey: encrypt(sol.testnet.privateKey),
+      },
+      {
+        chain: "starknet",
+        network: "mainnet",
+        address: strk.mainnet.address,
+        encryptedPrivateKey: encrypt(strk.mainnet.privateKey),
+      },
+      {
+        chain: "starknet",
+        network: "testnet",
+        address: strk.testnet.address,
+        encryptedPrivateKey: encrypt(strk.testnet.privateKey),
+      },
+      // USDT addresses
+      {
+        chain: "usdt_erc20",
+        network: "mainnet",
+        address: eth.mainnet.address,
+        encryptedPrivateKey: encrypt(eth.mainnet.privateKey),
+      },
+      {
+        chain: "usdt_erc20",
+        network: "testnet",
+        address: eth.testnet.address,
+        encryptedPrivateKey: encrypt(eth.testnet.privateKey),
+      },
+      {
+        chain: "usdt_trc20",
+        network: "mainnet",
+        address: tron.mainnet.address,
+        encryptedPrivateKey: encrypt(tron.mainnet.privateKey),
+      },
+      {
+        chain: "usdt_trc20",
+        network: "testnet",
+        address: tron.testnet.address,
+        encryptedPrivateKey: encrypt(tron.testnet.privateKey),
+      },
+      // Stellar - VALIDATE BEFORE ADDING
+      {
+        chain: "stellar",
+        network: "mainnet",
+        address: stellar.mainnet.address,
+        encryptedPrivateKey: stellar.mainnet.privateKey ? encrypt(stellar.mainnet.privateKey) : "",
+      },
+      {
+        chain: "stellar",
+        network: "testnet",
+        address: stellar.testnet.address,
+        encryptedPrivateKey: stellar.testnet.privateKey ? encrypt(stellar.testnet.privateKey) : "",
+      },
+      // Polkadot - VALIDATE BEFORE ADDING
+      {
+        chain: "polkadot",
+        network: "mainnet",
+        address: polkadot.mainnet.address,
+        encryptedPrivateKey: polkadot.mainnet.privateKey ? encrypt(polkadot.mainnet.privateKey) : "",
+      },
+      {
+        chain: "polkadot",
+        network: "testnet",
+        address: polkadot.testnet.address,
+        encryptedPrivateKey: polkadot.testnet.privateKey ? encrypt(polkadot.testnet.privateKey) : "",
+      },
+      {
+        chain: "usdc-evm",
+        network: "mainnet",
+        address: usdcWallets.evm.address,
+        encryptedPrivateKey: encrypt(usdcWallets.evm.privateKey),
+        note: "USDC on Ethereum, Arbitrum, Base, Optimism, Polygon, Linea, Scroll, zkSync Era, Avalanche, Mantle, etc.",
+      },
+      {
+        chain: "usdc-solana",
+        network: "mainnet",
+        address: usdcWallets.solana.address,
+        encryptedPrivateKey: encrypt(usdcWallets.solana.privateKey),
+        note: "USDC (SPL) on Solana - ATA created automatically on receive",
+      },
+      {
+        chain: "usdc-starknet",
+        network: "mainnet",
+        address: usdcWallets.starknet.address,
+        encryptedPrivateKey: encrypt(usdcWallets.starknet.privateKey),
+        note: "USDC on Starknet - requires account deployment if new",
+      },
+    ];
+
+    // ===== ENHANCED DATABASE SAVE WITH VALIDATION =====
+    console.log(
+      `[DEBUG] Saving ${fullAddresses.length} addresses for user: ${user.id}`,
+    );
+    
+    const addressRepo = AppDataSource.getRepository(UserAddress);
+    let savedCount = 0;
+    let skippedCount = 0;
+    
+    for (const addr of fullAddresses) {
       try {
-        if (user.id) {
-          await NotificationService.notifyRegistration(user.id, {
-            email,
-            registrationDate: new Date(),
-            addressCount: fullAddresses.length,
-          });
-          console.log(
-            "[DEBUG] Registration notification created for user:",
-            user.id,
-          );
+        // VALIDATE: Skip empty addresses
+        if (!addr.address || addr.address.trim() === '') {
+          console.warn(`[WARN] ⚠️ Skipping empty address for chain ${addr.chain}/${addr.network}`);
+          skippedCount++;
+          continue;
         }
-      } catch (notificationError) {
-        console.error(
-          "[DEBUG] Failed to create registration notification:",
-          notificationError,
-        );
-        // Don't fail registration if notification fails
+        
+        // VALIDATE: Check ChainType enum exists
+        const chainKey = addr.chain.toUpperCase().replace(/-/g, '_');
+        if (!ChainType[chainKey as keyof typeof ChainType]) {
+          console.error(`[ERROR] ❌ Unknown ChainType: ${chainKey}`);
+          console.log('[DEBUG] Available ChainType keys:', Object.keys(ChainType));
+          skippedCount++;
+          continue;
+        }
+        
+        // VALIDATE: Check NetworkType enum exists
+        const networkKey = addr.network.toUpperCase();
+        if (!NetworkType[networkKey as keyof typeof NetworkType]) {
+          console.error(`[ERROR] ❌ Unknown NetworkType: ${networkKey}`);
+          console.log('[DEBUG] Available NetworkType keys:', Object.keys(NetworkType));
+          skippedCount++;
+          continue;
+        }
+        
+        await addressRepo.save({
+          address: addr.address,
+          encryptedPrivateKey: addr.encryptedPrivateKey,
+          user,
+          userId: user.id!,
+          chain: ChainType[chainKey as keyof typeof ChainType],
+          network: NetworkType[networkKey as keyof typeof NetworkType],
+        });
+        
+        savedCount++;
+        console.log(`[DEBUG] ✅ Saved ${addr.chain}/${addr.network}:`, addr.address.substring(0, 20) + '...');
+      } catch (err) {
+        console.error(`[ERROR] ❌ Failed to save address ${addr.chain}/${addr.network}:`, err);
+        skippedCount++;
       }
+    }
+    
+    console.log(`[DEBUG] Address save complete: ${savedCount} saved, ${skippedCount} skipped`);
 
-      // Return user profile with addresses (no private keys)
-      const userAddresses = fullAddresses.map((a: any) => ({
+    console.log(`\n========================================`);
+    console.log(`📧 REGISTRATION OTP`);
+    console.log(`Email: ${email}`);
+    console.log(`OTP Code: ${otp}`);
+    console.log(`Expires: ${otpExpiry.toISOString()}`);
+    console.log(`========================================\n`);
+
+    // Create registration notification
+    try {
+      if (user.id) {
+        await NotificationService.notifyRegistration(user.id, {
+          email,
+          registrationDate: new Date(),
+          addressCount: fullAddresses.length,
+          otp,
+        });
+        console.log(
+          "[DEBUG] Registration notification created for user:",
+          user.id,
+        );
+      }
+    } catch (notificationError) {
+      console.error(
+        "[DEBUG] Failed to create registration notification:",
+        notificationError,
+      );
+      // Don't fail registration if notification fails
+    }
+
+    // Return user profile with addresses (no private keys)
+    const userAddresses = fullAddresses
+      .filter(a => a.address && a.address.trim() !== '') // Only include valid addresses
+      .map((a: any) => ({
         chain: AuthController.mapChainName(a.chain),
         network: a.network,
         address: a.address,
       }));
-      // Sort addresses before sending
-      const sortedAddresses = AuthController.sortAddresses(userAddresses);
+      
+    // Sort addresses before sending
+    const sortedAddresses = AuthController.sortAddresses(userAddresses);
 
-      // Always log sorted addresses for debugging
-      console.log(
-        "[DEBUG] Sorted addresses:",
-        JSON.stringify(sortedAddresses, null, 2),
-      );
+    console.log(
+      "[DEBUG] Sorted addresses:",
+      JSON.stringify(sortedAddresses, null, 2),
+    );
 
-      res.status(201).json({
-        message: "User registered successfully. Please verify your email.",
-        userId: user.id,
-        role: targetUserType,
-        companyName: companyName, // Added this
-        companyCode: companyCodeValue,
-        addresses: sortedAddresses,
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
+    res.status(201).json({
+      message: "User registered successfully. Please verify your email.",
+      userId: user.id,
+      role: targetUserType,
+      companyName: companyName,
+      companyCode: companyCodeValue,
+      addresses: sortedAddresses,
+      otp: otp,
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
+}
 
   /**
    * Login user.
@@ -1026,111 +1398,133 @@ export class AuthController {
    * - Marks email as verified if OTP is valid.
    * - Returns success or error.
    */
-  static async verifyOTP(req: Request, res: Response): Promise<any> {
+static async verifyOTP(req: Request, res: Response): Promise<any> {
+  try {
+    let { email, otp, code } = req.body;
+    
+    // Allow 'code' to be used alias for 'otp'
+    if (!otp && code) otp = code;
+    
+    // ✅ FIX: Convert to string to handle both number and string inputs
+    if (otp !== undefined && otp !== null) {
+      otp = String(otp);
+    }
+    
+    // ✅ FIX: Validate email first
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+    
+    // ✅ FIX: Validate OTP is provided
+    if (!otp) {
+      res.status(400).json({ error: "OTP is required" });
+      return;
+    }
+    
+    const userRepository = AppDataSource.getRepository(User);
+
+    // Find user by email
+    const user = await userRepository.findOne({ where: { email } });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Ensure OTP and expiry are present
+    if (!user.emailOTP || !user.emailOTPExpiry) {
+      res.status(400).json({
+        error: "OTP not found. Please request a new one.",
+      });
+      return;
+    }
+
+    // Check if OTP is expired
+    if (isOTPExpired(user.emailOTPExpiry)) {
+      res.status(400).json({
+        error: "OTP expired. Please request a new one.",
+      });
+      return;
+    }
+
+    // ✅ Check if OTP matches (now both are strings)
+    if (user.emailOTP !== otp) {
+      res.status(400).json({ error: "Invalid OTP" });
+      return;
+    }
+
+    // Mark email as verified and clear OTP fields
+    user.isEmailVerified = true;
+    user.emailOTP = null;
+    user.emailOTPExpiry = null;
+    await userRepository.save(user);
+
+    // Capture non-null values to satisfy TypeScript
+    const userId = user.id!;
+    const userEmail = user.email!;
+
+    // Create OTP verified notification
     try {
-      const { email, otp } = req.body;
-      const userRepository = AppDataSource.getRepository(User);
-
-      // Find user by email
-      const user = await userRepository.findOne({ where: { email } });
-      if (!user) {
-        res.status(404).json({ error: "User not found" });
-        return;
-      }
-
-      // Ensure OTP and expiry are present
-      if (!user.emailOTP || !user.emailOTPExpiry) {
-        res.status(400).json({
-          error: "OTP not found. Please request a new one.",
-        });
-        return;
-      }
-
-      // Check if OTP is expired
-      if (isOTPExpired(user.emailOTPExpiry)) {
-        res.status(400).json({
-          error: "OTP expired. Please request a new one.",
-        });
-        return;
-      }
-
-      // Check if OTP matches
-      if (user.emailOTP !== otp) {
-        res.status(400).json({ error: "Invalid OTP" });
-        return;
-      }
-
-      // Mark email as verified and clear OTP fields
-      user.isEmailVerified = true;
-      user.emailOTP = null;
-      user.emailOTPExpiry = null;
-      await userRepository.save(user);
-
-      // Fire-and-forget: notify the notification service (don't block the response)
-      // Capture non-null values to satisfy TypeScript
-      const userId = user.id!;
-      const userEmail = user.email!;
-      NotificationService.notifyOTPVerified(userId, {
+      await NotificationService.notifyOTPVerified(userId, {
         verificationTime: new Date(),
         email: userEmail,
-      })
-        .then(() =>
-          console.log(
-            "[DEBUG] OTP verification notification created for user:",
-            userId,
-          ),
-        )
-        .catch((notificationError) =>
-          console.error(
-            "[DEBUG] Failed to create OTP verification notification:",
-            notificationError,
-          ),
-        );
-
-      // After successful verification, issue tokens so frontend can redirect to dashboard without logging in
-      try {
-        if (!userId || !userEmail) {
-          res.status(500).json({ error: "User data incomplete" });
-          return;
-        }
-        const payload = { userId: userId, email: userEmail };
-        const accessToken = generateAccessToken(payload);
-        const refreshToken = generateRefreshToken(payload);
-
-        // Save refresh token to DB
-        const refreshTokenRepository =
-          AppDataSource.getRepository(RefreshToken);
-        const refreshTokenEntity = refreshTokenRepository.create({
-          token: refreshToken,
-          userId: userId,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        });
-        await refreshTokenRepository.save(refreshTokenEntity);
-
-        // Return tokens and user info so frontend can proceed to dashboard
-        return res.json({
-          message: "Email verified successfully",
-          accessToken,
-          refreshToken,
-          user: {
-            id: userId,
-            email: userEmail,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.userType,
-            isEmailVerified: user.isEmailVerified,
-          },
-        });
-      } catch (tokenErr) {
-        console.error("Post-verify token issue:", tokenErr);
-        // If token issuance fails, still return success of verification
-        return res.json({ message: "Email verified successfully" });
-      }
-    } catch (error) {
-      console.error("OTP verification error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      });
+      console.log(
+        "[DEBUG] OTP verification notification created for user:",
+        userId,
+      );
+    } catch (notificationError) {
+      console.error(
+        "[DEBUG] Failed to create OTP verification notification:",
+        notificationError,
+      );
     }
+
+    // After successful verification, issue tokens so frontend can redirect to dashboard without logging in
+    try {
+      if (!userId || !userEmail) {
+        res.status(500).json({ error: "User data incomplete" });
+        return;
+      }
+      const payload = { userId: userId, email: userEmail };
+      const accessToken = generateAccessToken(payload);
+      const refreshToken = generateRefreshToken(payload);
+
+      // Save refresh token to DB
+      const refreshTokenRepository =
+        AppDataSource.getRepository(RefreshToken);
+      const refreshTokenEntity = refreshTokenRepository.create({
+        token: refreshToken,
+        userId: userId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      await refreshTokenRepository.save(refreshTokenEntity);
+
+      // Return tokens and user info so frontend can proceed to dashboard
+      return res.json({
+        message: "Email verified successfully",
+        accessToken,
+        refreshToken,
+        user: {
+          id: userId,
+          email: userEmail,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.userType,
+          isEmailVerified: user.isEmailVerified,
+        },
+      });
+    } catch (tokenErr) {
+      console.error("Post-verify token issue:", tokenErr);
+      // If token issuance fails, still return success of verification
+      return res.json({ message: "Email verified successfully" });
+    }
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
+}
+
 
   /**
    * Resend OTP for email verification.
@@ -1163,20 +1557,45 @@ export class AuthController {
       user.emailOTPExpiry = getOTPExpiry();
       await userRepository.save(user);
 
-      // Send OTP email using Mailtrap
-      try {
-        await sendMailtrapMail({
-          to: email,
-          subject: "Your OTP Code",
-          text: `Your OTP code is: ${otp}`,
-          html: resendOtpTemplate(email, otp),
-        });
-      } catch (mailErr) {
-        console.error("Mailtrap send error:", mailErr);
-      }
+      // Send OTP email using Mailtrap (temporarily disabled)
+      // try {
+      //   await sendMailtrapMail({
+      //     to: email,
+      //     subject: "Your OTP Code",
+      //     text: `Your OTP code is: ${otp}`,
+      //     html: resendOtpTemplate(email, otp),
+      //   });
+      // } catch (mailErr) {
+      //   console.error("Mailtrap send error:", mailErr);
+      // }
       console.log(`OTP for ${email}: ${otp}`);
 
-      res.json({ message: "OTP sent successfully" });
+      // Create notification for OTP resend
+      try {
+        if (user.id) {
+          await NotificationService.createNotification(
+            user.id,
+            NotificationType.SECURITY_ALERT,
+            "OTP Resent",
+            "A new OTP was generated for email verification.",
+            {
+              email,
+              timestamp: new Date(),
+              ipAddress: req.ip,
+            },
+          );
+        }
+      } catch (notificationError) {
+        console.error(
+          "Failed to create resend OTP notification:",
+          notificationError,
+        );
+      }
+
+      res.json({
+        message: "OTP sent successfully",
+        ...(process.env.NODE_ENV !== "production" ? { otp } : {}),
+      });
     } catch (error) {
       console.error("Resend OTP error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1523,21 +1942,21 @@ export class AuthController {
       user.passwordResetExpiry = resetExpiry;
       await userRepository.save(user);
 
-      // Send password reset email
-      try {
-        await sendMailtrapMail({
-          to: email,
-          subject: "Password Reset Request",
-          text: passwordResetRequestText(email, resetToken),
-          html: passwordResetRequestTemplate(email, resetToken),
-        });
+      // Send password reset email (temporarily disabled)
+      // try {
+      //   await sendMailtrapMail({
+      //     to: email,
+      //     subject: "Password Reset Request",
+      //     text: passwordResetRequestText(email, resetToken),
+      //     html: passwordResetRequestTemplate(email, resetToken),
+      //   });
 
-        console.log(`Password reset email sent to: ${email}`);
-        console.log(`Reset token: ${resetToken} (expires: ${resetExpiry})`);
-      } catch (emailError) {
-        console.error("Failed to send reset email:", emailError);
-        // Still return success to not reveal email existence
-      }
+      //   console.log(`Password reset email sent to: ${email}`);
+      //   console.log(`Reset token: ${resetToken} (expires: ${resetExpiry})`);
+      // } catch (emailError) {
+      //   console.error("Failed to send reset email:", emailError);
+      //   // Still return success to not reveal email existence
+      // }
 
       // Create notification
       try {
@@ -1741,20 +2160,20 @@ export class AuthController {
         { isRevoked: true },
       );
 
-      // Send password change confirmation email
-      try {
-        await sendMailtrapMail({
-          to: email,
-          subject: "Password Changed Successfully",
-          text: passwordChangedText(email),
-          html: passwordChangedTemplate(email),
-        });
-      } catch (emailError) {
-        console.error(
-          "Failed to send password change confirmation:",
-          emailError,
-        );
-      }
+      // Send password change confirmation email (temporarily disabled)
+      // try {
+      //   await sendMailtrapMail({
+      //     to: email,
+      //     subject: "Password Changed Successfully",
+      //     text: passwordChangedText(email),
+      //     html: passwordChangedTemplate(email),
+      //   });
+      // } catch (emailError) {
+      //   console.error(
+      //     "Failed to send password change confirmation:",
+      //     emailError,
+      //   );
+      // }
 
       // Create notification
       try {

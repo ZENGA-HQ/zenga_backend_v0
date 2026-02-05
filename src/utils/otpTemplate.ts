@@ -21,7 +21,7 @@ export function otpTemplate(email: string, otp: string) {
       <p>Your verification code is:</p><h1 style=\"color:${colors.primary};\">${otp}</h1><p>Enter this code in the app to verify your email address for ${email}.</p>
     </div>
     <div style=\"margin-top:32px; font-size:12px; color:#888; text-align:center;\">
-      &copy; 2025 Velo. All rights reserved.
+      &copy; 2025 ZENGA. All rights reserved.
     </div>
   </div>
 </body>

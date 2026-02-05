@@ -7,6 +7,7 @@ import {
   forgotPasswordSchema,
   verifyResetTokenSchema,
   resetPasswordSchema,
+  otpSchema,
 } from "../validation/auth";
 
 const router = Router();
@@ -136,7 +137,7 @@ router.post("/google/signup", AuthController.googleSignup);
  *       200:
  *         description: OTP verified
  */
-// Verify OTP
+// Verify OTPvalidateRequest(otpSchema), 
 router.post("/verify-otp", AuthController.verifyOTP);
 
 /**

@@ -2,7 +2,7 @@ export function qrPaymentTemplate(
   title: string,
   amount: string,
   currency: string,
-  details?: any
+  details?: any,
 ) {
   const primary = "#1e40af";
   const text = "#0f172a";
@@ -18,11 +18,11 @@ export function qrPaymentTemplate(
         ? `<pre style="white-space:pre-wrap;background:#f3f4f6;padding:12px;border-radius:6px">${JSON.stringify(
             details,
             null,
-            2
+            2,
           )}</pre>`
         : ""
     }
-    <p style="font-size:12px;color:#6b7280;margin-top:18px;">Thank you for using Velo QR payments.</p>
+    <p style="font-size:12px;color:#6b7280;margin-top:18px;">Thank you for using ZENGA QR payments.</p>
   </div>
 </body>
 </html>`;
