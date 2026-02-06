@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: zenga_app:latest
     ports:
-      - "5500:5500"
+      - "5500"
     environment:
       - NODE_ENV=production
       - PORT=5500
@@ -15,28 +15,31 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - dokploy-network
 
-  dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-    command: npm run dev
-    volumes:
-      - ./:/usr/src/app:delegated
-      - /usr/src/app/node_modules
-    ports:
-      - "5501:5500"
-    environment:
-      - NODE_ENV=deZENGApment
-      - PORT=5500
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/zenga_db
-    env_file:
-      - .env
-    tty: true
-    stdin_open: true
+  # dev:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: builder
+  #   command: npm run dev
+  #   volumes:
+  #     - ./:/usr/src/app:delegated
+  #     - /usr/src/app/node_modules
+  #   ports:
+  #     - "5501:5500"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=5500
+  #     - DATABASE_URL=postgresql://postgres:postgres@db:5432/zenga_db
+  #   env_file:
+  #     - .env
+  #   tty: true
+  #   stdin_open: true
 
   db:
     image: postgres:16-alpine
@@ -45,10 +48,21 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - "5432:5432"
+      - "5432"
     volumes:
       - zenga_db:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
   zenga_db:
