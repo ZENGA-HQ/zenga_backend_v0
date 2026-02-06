@@ -11,8 +11,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5500
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/zenga_db
     env_file:
       - .env
+    depends_on:
+      - db
     restart: unless-stopped
 
   dev:
@@ -25,11 +28,27 @@ services:
       - ./:/usr/src/app:delegated
       - /usr/src/app/node_modules
     ports:
-      - "5500:5500"
+      - "5501:5500"
     environment:
       - NODE_ENV=deZENGApment
       - PORT=5500
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/zenga_db
     env_file:
       - .env
     tty: true
     stdin_open: true
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=zenga_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - zenga_db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  zenga_db:

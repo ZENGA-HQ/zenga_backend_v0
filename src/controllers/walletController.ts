@@ -72,7 +72,7 @@ export class WalletController {
         const BTC_TESTNET = "https://blockstream.info/testnet/api/address/";
         // SOL endpoints
         const SOL_MAINNET = `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
-        const SOL_TESTNET = `https://solana-testnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
+        const SOL_TESTNET = `https://solana-devnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`; // Using devnet for testnet
         // STRK endpoints
         const STRK_MAINNET = `https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/${process.env.ALCHEMY_STARKNET_KEY}`;
         const STRK_TESTNET = `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${process.env.ALCHEMY_STARKNET_KEY}`;
@@ -203,9 +203,10 @@ export class WalletController {
           }
         } else if (addr.chain === "solana") {
           try {
-            const connection = new Connection(
-              addr.network === "testnet" ? SOL_TESTNET : SOL_MAINNET
-            );
+            const SOL_RPC = addr.network === "testnet" 
+              ? `https://solana-devnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`
+              : `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
+            const connection = new Connection(SOL_RPC);
             const publicKey = new PublicKey(addr.address as string);
             const balance = await connection.getBalance(publicKey);
             balances.push({

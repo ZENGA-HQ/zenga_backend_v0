@@ -12,6 +12,5 @@ console.log(`Using PORT=${PORT}`);
 connectDB().then(() => {
        app.listen(PORT, () => {
               console.log(`Server is running on port ${PORT}`);
-              // Start automatic deposit monitor (calls WalletController.checkForDeposits periodically)
        });
 });

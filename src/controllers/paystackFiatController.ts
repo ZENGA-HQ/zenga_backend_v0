@@ -71,6 +71,12 @@ export class PaystackController {
         });
       }
 
+      if (!user.email) {
+        return res.status(400).json({
+          error: "User email is required for payment initialization",
+        });
+      }
+
       // build the response for the transaction
       const response = await initializeTransaction({
         amount: fees.totalToCharge,

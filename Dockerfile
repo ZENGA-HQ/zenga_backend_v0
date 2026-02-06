@@ -1,28 +1,26 @@
 # Multi-stage Dockerfile for ZENGA
-# Builder stage: install deps and build TypeScript
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /usr/src/app
 
-# Install dependencies (uses package-lock.json)
+# Install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install  # Changed from npm ci
 
 # Copy source and build
 COPY . .
 RUN npm run build
 
 # Runner stage: only production deps + built dist
-FROM node:18-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev  # Changed from npm ci --omit=dev
 
 # Copy built files from builder
 COPY --from=builder /usr/src/app/dist ./dist
 
 EXPOSE 5500
 
-# Run the compiled server
 CMD ["node", "dist/server.js"]

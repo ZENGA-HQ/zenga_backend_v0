@@ -544,7 +544,761 @@ export class SplitPaymentController {
     }
   }
 
-  // EXECUTE SPLIT PAYMENT
+//   // EXECUTE SPLIT PAYMENT
+//   static async executeSplitPayment(
+//     req: AuthRequest,
+//     res: Response,
+//   ): Promise<void> {
+//     try {
+//       const { id } = req.params;
+
+//       if (!id) {
+//         res.status(400).json({ error: "Missing split payment ID" });
+//         return;
+//       }
+
+//       const paymentId = typeof id === "string" ? id : id[0];
+
+//       const splitPaymentRepo = AppDataSource.getRepository(SplitPayment);
+//       const splitPayment = await splitPaymentRepo.findOne({
+//         where: { id: paymentId as string, userId: req.user!.id! },
+//         relations: ["recipients"],
+//       });
+
+//       if (!splitPayment) {
+//         res.status(404).json({ error: "Split payment not found" });
+//         return;
+//       }
+
+//       if (splitPayment.status !== SplitPaymentStatus.ACTIVE) {
+//         res.status(400).json({
+//           error: `Split payment is ${splitPayment.status} and cannot be executed`,
+//         });
+//         return;
+//       }
+
+//       const activeRecipients = (splitPayment.recipients || []).filter(
+//         (r) => r.isActive,
+//       );
+//       if (activeRecipients.length === 0) {
+//         res.status(400).json({ error: "No active recipients found" });
+//         return;
+//       }
+
+//       // Create execution record
+//       const executionRepo = AppDataSource.getRepository(SplitPaymentExecution);
+//       const execution = executionRepo.create({
+//         splitPaymentId: splitPayment.id,
+//         totalAmount: splitPayment.totalAmount,
+//         totalRecipients: activeRecipients.length,
+//         status: ExecutionStatus.PROCESSING,
+//       });
+
+//       const savedExecution = await executionRepo.save(execution);
+
+//       // TODO: Re-enable transaction PIN verification when needed
+//       // Verify transaction PIN
+//       // const skipPin = process.env.SKIP_TRANSACTION_PIN === 'true';
+//       // if (!skipPin) {
+//       //     const providedPin = String(req.body?.transactionPin ?? req.body?.pin ?? '');
+//       //     if (!providedPin) {
+//       //         res.status(400).json({ error: 'Missing transactionPin in request body' });
+//       //         return;
+//       //     }
+
+//       //     const userRepo = AppDataSource.getRepository('users');
+//       //     const userRecord: any = await userRepo.findOne({ where: { id: req.user!.id } });
+//       //
+//       //     if (!userRecord?.transactionPin) {
+//       //         res.status(400).json({ error: 'Transaction PIN not set' });
+//       //         return;
+//       //     }
+
+//       //     const pinMatches = await bcrypt.compare(providedPin, userRecord.transactionPin);
+//       //     if (!pinMatches) {
+//       //         res.status(403).json({ error: 'Invalid transaction PIN' });
+//       //         return;
+//       //     }
+//       // }
+
+//       // Get user's private key
+//       const userAddressRepo = AppDataSource.getRepository(UserAddress);
+//       const isStarknetChain =
+//         splitPayment.chain === "starknet" ||
+//         splitPayment.chain === "strk" ||
+//         splitPayment.chain.startsWith("starknet_");
+
+//       let userAddress = await userAddressRepo.findOne({
+//         where: {
+//           userId: req.user!.id!,
+//           address: splitPayment.fromAddress,
+//           chain: splitPayment.chain as ChainType,
+//           network: splitPayment.network as NetworkType,
+//         },
+//       });
+
+//       // Fallback for Starknet: try short format
+//       if (!userAddress && isStarknetChain) {
+//         const shortAddr = splitPayment.fromAddress.replace(/^0x0+/, "0x");
+//         userAddress = await userAddressRepo.findOne({
+//           where: {
+//             userId: req.user!.id!,
+//             address: shortAddr,
+//             chain: splitPayment.chain as ChainType,
+//             network: splitPayment.network as NetworkType,
+//           },
+//         });
+//       }
+
+//       if (!userAddress?.encryptedPrivateKey) {
+//         throw new Error(
+//           `Private key not found for address: ${splitPayment.fromAddress}`,
+//         );
+//       }
+
+//       const { decrypt } = require("../utils/keygen");
+//       const privateKey = decrypt(userAddress.encryptedPrivateKey);
+
+//       // ===== STEP 1: Calculate fees for all recipients =====
+//       const recipientAmounts = activeRecipients.map((r) =>
+//         parseFloat(r.amount),
+//       );
+//       const feeCalculations = FeeService.calculateBatchFees(recipientAmounts);
+//       const totalFees = feeCalculations.reduce(
+//         (sum, calc) => sum + calc.fee,
+//         0,
+//       );
+//       const totalPaymentAmount = parseFloat(splitPayment.totalAmount as any);
+//       const totalAmountWithFees = totalPaymentAmount + totalFees;
+
+//       console.log(
+//         `Split payment fee breakdown:
+// - Total payment amount: $${totalPaymentAmount.toFixed(2)}
+// - Total fees: $${totalFees.toFixed(2)}
+// - Sender pays total: $${totalAmountWithFees.toFixed(2)}
+// - Recipients: ${activeRecipients.length}
+// - Fee calculations:`,
+//         feeCalculations.map((calc, idx) => ({
+//           recipient: activeRecipients[idx]!.recipientAddress,
+//           amount: calc.recipientReceives,
+//           fee: calc.fee,
+//           tier: calc.tier,
+//         })),
+//       );
+
+//       // ===== STEP 2: Get treasury wallet =====
+//       const treasuryWallet = TreasuryConfig.getTreasuryWallet(
+//         splitPayment.chain as ChainType,
+//         splitPayment.network as NetworkType,
+//       );
+
+//       if (!treasuryWallet) {
+//         throw new Error(
+//           `Treasury wallet not configured for ${splitPayment.chain} on ${splitPayment.network}`,
+//         );
+//       }
+
+//       console.log(
+//         `Treasury wallet for ${splitPayment.chain}/${splitPayment.network}: ${treasuryWallet}`,
+//       );
+
+//       // ===== STEP 3: Validate sender balance (placeholder - implement actual check) =====
+//       // TODO: Implement actual blockchain balance check
+//       // For now, we assume the balance is sufficient
+//       console.log(
+//         `[PLACEHOLDER] Validating sender has $${totalAmountWithFees.toFixed(2)} available...`,
+//       );
+
+//       // Process payments
+//       let results: Array<{ success: boolean; txHash?: string; error?: string }>;
+
+//       if (
+//         splitPayment.chain === "ethereum" ||
+//         splitPayment.chain === "usdt_erc20"
+//       ) {
+//         results = await SplitPaymentController.processEthereumBatch(
+//           splitPayment,
+//           activeRecipients,
+//           privateKey,
+//         );
+//       } else if (splitPayment.chain === "bitcoin") {
+//         results = await SplitPaymentController.processBitcoinBatch(
+//           splitPayment,
+//           activeRecipients,
+//           privateKey,
+//         );
+//       } else if (splitPayment.chain === "solana") {
+//         results = await SplitPaymentController.processSolanaBatch(
+//           splitPayment,
+//           activeRecipients,
+//           privateKey,
+//         );
+//       } else if (splitPayment.chain === "stellar") {
+//         results = await SplitPaymentController.processStellarBatch(
+//           splitPayment,
+//           activeRecipients,
+//           privateKey,
+//         );
+//       } else if (splitPayment.chain === "polkadot") {
+//         results = await SplitPaymentController.processPolkadotBatch(
+//           splitPayment,
+//           activeRecipients,
+//           privateKey,
+//         );
+//       } else if (isStarknetChain) {
+//         results = await SplitPaymentController.processStarknetBatch(
+//           splitPayment,
+//           activeRecipients,
+//           privateKey,
+//         );
+//       } else {
+//         throw new Error(
+//           `Chain ${splitPayment.chain} not supported for split payments`,
+//         );
+//       }
+
+//       // Update execution status
+//       const successCount = results.filter((r) => r.success).length;
+//       const failedCount = results.filter((r) => !r.success).length;
+
+//       savedExecution.successfulPayments = successCount;
+//       savedExecution.failedPayments = failedCount;
+//       savedExecution.completedAt = new Date();
+//       savedExecution.status =
+//         failedCount === 0
+//           ? ExecutionStatus.COMPLETED
+//           : successCount > 0
+//             ? ExecutionStatus.PARTIALLY_FAILED
+//             : ExecutionStatus.FAILED;
+
+//       await executionRepo.save(savedExecution);
+
+//       // Save results
+//       const resultRepo = AppDataSource.getRepository(
+//         SplitPaymentExecutionResult,
+//       );
+//       for (let i = 0; i < results.length; i++) {
+//         await resultRepo.save({
+//           executionId: savedExecution.id,
+//           recipientAddress: activeRecipients[i]!.recipientAddress,
+//           recipientName: activeRecipients[i]!.recipientName ?? null,
+//           recipientEmail: activeRecipients[i]!.recipientEmail ?? null,
+//           amount: activeRecipients[i]!.amount,
+//           status: results[i]!.success
+//             ? PaymentResultStatus.SUCCESS
+//             : PaymentResultStatus.FAILED,
+//           txHash: results[i]!.txHash ?? null,
+//           errorMessage: results[i]!.error ?? null,
+//           processedAt: new Date(),
+//         });
+//       }
+
+//       // Update split payment
+//       splitPayment.executionCount += 1;
+//       splitPayment.lastExecutedAt = new Date();
+//       await splitPaymentRepo.save(splitPayment);
+
+//       // ===== STEP 4: Execute fee collection (only if there were successful payments) =====
+//       let feeTxHash: string | undefined;
+//       const feeRecords: any[] = [];
+
+//       if (successCount > 0) {
+//         try {
+//           console.log(
+//             `Executing fee collection: $${totalFees.toFixed(2)} to treasury...`,
+//           );
+
+//           // TODO: Replace with actual blockchain transaction to treasury
+//           // For now, use placeholder transaction hash
+//           feeTxHash = `0xfee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+//           console.log(`[PLACEHOLDER] Fee collection transaction: ${feeTxHash}`);
+
+//           // ===== STEP 5: Record fees in database for each successful payment =====
+//           for (let i = 0; i < results.length; i++) {
+//             if (results[i]!.success) {
+//               // Create a Transaction record for this fee transfer first so the
+//               // Fee record can reference it (DB enforces FK to transactions.id).
+//               const feeTx = await FeeCollectionService.createFeeTransferRecord({
+//                 userId: req.user!.id as string,
+//                 feeAmount: feeCalculations[i]!.fee.toString(),
+//                 chain: splitPayment.chain,
+//                 network: splitPayment.network,
+//                 fromAddress: splitPayment.fromAddress,
+//                 treasuryAddress: treasuryWallet,
+//                 originalTxId: results[i]!.txHash!,
+//               });
+
+//               const calculationWithOnchain = {
+//                 ...feeCalculations[i]!,
+//                 onchainTxHash: results[i]!.txHash,
+//               };
+
+//               const feeRecord = await FeeCollectionService.recordFee({
+//                 userId: req.user!.id as string,
+//                 // Reference the transaction created above
+//                 transactionId: feeTx.id,
+//                 calculation: calculationWithOnchain,
+//                 chain: splitPayment.chain,
+//                 network: splitPayment.network,
+//                 feeType: "split_payment",
+//                 description: `Split payment fee for ${splitPayment.title} - Recipient: ${activeRecipients[i]!.recipientAddress}`,
+//               });
+
+//               // Launch a background fee transfer to treasury for supported chains.
+//               // We do this asynchronously so the HTTP response is not blocked.
+//               (async () => {
+//                 try {
+//                   const chain = splitPayment.chain;
+
+//                   // Helper: convert USD fee -> token units (BigInt) for a given token
+//                   const convertUsdToTokenUnits = async (
+//                     tokenSym: string,
+//                     decimals: number,
+//                     usdAmount: number,
+//                   ) => {
+//                     const price = await PriceFeedService.getPrice(
+//                       tokenSym.toUpperCase(),
+//                     );
+//                     if (!price || price <= 0)
+//                       throw new Error("Invalid price for token conversion");
+//                     const tokensFloat = usdAmount / price;
+//                     const units = BigInt(
+//                       Math.floor(tokensFloat * Math.pow(10, decimals)),
+//                     );
+//                     return { tokensFloat, units };
+//                   };
+
+//                   // ETH / EVM chains (native ETH) and USDT (ERC20)
+//                   if (
+//                     chain === "ethereum" ||
+//                     chain === "usdt_erc20" ||
+//                     chain === "usdt_trc20" ||
+//                     chain === "usdt_bep20"
+//                   ) {
+//                     try {
+//                       const isUSDT = chain !== "ethereum";
+//                       const providerUrl =
+//                         splitPayment.network === "testnet"
+//                           ? `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`
+//                           : `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
+//                       const {
+//                         JsonRpcProvider,
+//                         Wallet: EthersWallet,
+//                         Contract,
+//                       } = require("ethers");
+//                       const provider = new (require("ethers").JsonRpcProvider)(
+//                         providerUrl,
+//                       );
+//                       const wallet = new (require("ethers").Wallet)(
+//                         privateKey,
+//                         provider,
+//                       );
+
+//                       if (isUSDT) {
+//                         const usdtAddress =
+//                           splitPayment.network === "testnet"
+//                             ? "0x516de3a7a567d81737e3a46ec4ff9cfd1fcb0136"
+//                             : "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+//                         const decimals = 6;
+//                         const { tokensFloat, units } =
+//                           await convertUsdToTokenUnits(
+//                             "USDT",
+//                             decimals,
+//                             feeCalculations[i]!.fee,
+//                           );
+//                         const usdtAbi = [
+//                           "function transfer(address to, uint256 value) public returns (bool)",
+//                         ];
+//                         const usdtContract = new ethers.Contract(
+//                           usdtAddress,
+//                           usdtAbi,
+//                           wallet,
+//                         );
+//                         const tx = await usdtContract.transfer!(
+//                           treasuryWallet,
+//                           units.toString(),
+//                         );
+//                         await tx.wait?.();
+//                         await FeeCollectionService.completeFeeTransfer(
+//                           feeTx.id,
+//                           tx.hash,
+//                         );
+//                         console.log(
+//                           "[FeeTransfer][EVM][USDT] Completed fee transfer:",
+//                           tx.hash,
+//                         );
+//                       } else {
+//                         // Native ETH
+//                         const { tokensFloat, units } =
+//                           await convertUsdToTokenUnits(
+//                             "ETH",
+//                             18,
+//                             feeCalculations[i]!.fee,
+//                           );
+//                         const tx = await wallet.sendTransaction({
+//                           to: treasuryWallet,
+//                           value: units.toString(),
+//                         });
+//                         await tx.wait?.();
+//                         await FeeCollectionService.completeFeeTransfer(
+//                           feeTx.id,
+//                           tx.hash,
+//                         );
+//                         console.log(
+//                           "[FeeTransfer][EVM][ETH] Completed fee transfer:",
+//                           tx.hash,
+//                         );
+//                       }
+//                     } catch (evErr) {
+//                       console.error(
+//                         "[FeeTransfer][EVM] Fee transfer failed:",
+//                         evErr,
+//                       );
+//                       await FeeCollectionService.failFeeTransfer(
+//                         feeTx.id,
+//                         (evErr as any)?.message || String(evErr),
+//                       );
+//                     }
+//                     return;
+//                   }
+
+//                   // Bitcoin
+//                   if (chain === "bitcoin") {
+//                     try {
+//                       const btcPrice = await PriceFeedService.getPrice("BTC");
+//                       if (!btcPrice || btcPrice <= 0)
+//                         throw new Error("Invalid BTC price");
+//                       const feeUSD = feeCalculations[i]!.fee;
+//                       const btcAmount = feeUSD / btcPrice;
+//                       // sendBitcoinTransaction expects amount as string in BTC
+//                       const amountStr = btcAmount.toString();
+//                       const txHash =
+//                         await SplitPaymentController.sendBitcoinTransaction(
+//                           splitPayment.fromAddress,
+//                           treasuryWallet,
+//                           amountStr,
+//                           splitPayment.network,
+//                           privateKey,
+//                         );
+//                       await FeeCollectionService.completeFeeTransfer(
+//                         feeTx.id,
+//                         txHash,
+//                       );
+//                       console.log(
+//                         "[FeeTransfer][BTC] Completed fee transfer:",
+//                         txHash,
+//                       );
+//                     } catch (btcErr) {
+//                       console.error(
+//                         "[FeeTransfer][BTC] Fee transfer failed:",
+//                         btcErr,
+//                       );
+//                       await FeeCollectionService.failFeeTransfer(
+//                         feeTx.id,
+//                         (btcErr as any)?.message || String(btcErr),
+//                       );
+//                     }
+//                     return;
+//                   }
+
+//                   // Stellar XLM
+//                   if (chain === "stellar") {
+//                     try {
+//                       const SDK = getStellarSdk();
+//                       const ServerClass =
+//                         SDK.Server || (SDK.Horizon && SDK.Horizon.Server);
+//                       const server = new ServerClass(
+//                         splitPayment.network === "testnet"
+//                           ? "https://horizon-testnet.stellar.org"
+//                           : "https://horizon.stellar.org",
+//                       );
+//                       const networkPassphrase =
+//                         splitPayment.network === "testnet"
+//                           ? SDK.Networks.TESTNET
+//                           : SDK.Networks.PUBLIC;
+
+//                       // Load source keypair
+//                       let sourceKeypair;
+//                       try {
+//                         sourceKeypair = SDK.Keypair.fromSecret(privateKey);
+//                       } catch (err) {
+//                         // try raw seed
+//                         const hex = privateKey.startsWith("0x")
+//                           ? privateKey.slice(2)
+//                           : privateKey;
+//                         const seedBuf = Buffer.from(hex, "hex");
+//                         sourceKeypair = SDK.Keypair.fromRawEd25519Seed(seedBuf);
+//                       }
+
+//                       const feeUSD = feeCalculations[i]!.fee;
+//                       const xlmPrice = await PriceFeedService.getPrice("XLM");
+//                       if (!xlmPrice || xlmPrice <= 0)
+//                         throw new Error("Invalid XLM price");
+//                       const xlmAmount = (feeUSD / xlmPrice).toFixed(7);
+
+//                       const account = await server.loadAccount(
+//                         sourceKeypair.publicKey(),
+//                       );
+//                       const txBuilder = new SDK.TransactionBuilder(account, {
+//                         fee: String(await server.fetchBaseFee()),
+//                         networkPassphrase,
+//                       });
+//                       txBuilder.addOperation(
+//                         SDK.Operation.payment({
+//                           destination: treasuryWallet,
+//                           asset: SDK.Asset.native(),
+//                           amount: xlmAmount,
+//                         }),
+//                       );
+//                       const tx = txBuilder.setTimeout(30).build();
+//                       tx.sign(sourceKeypair);
+//                       const resp = await server.submitTransaction(tx);
+//                       await FeeCollectionService.completeFeeTransfer(
+//                         feeTx.id,
+//                         resp.hash,
+//                       );
+//                       console.log(
+//                         "[FeeTransfer][XLM] Completed fee transfer:",
+//                         resp.hash,
+//                       );
+//                     } catch (xlmErr) {
+//                       console.error(
+//                         "[FeeTransfer][XLM] Fee transfer failed:",
+//                         xlmErr,
+//                       );
+//                       await FeeCollectionService.failFeeTransfer(
+//                         feeTx.id,
+//                         (xlmErr as any)?.message || String(xlmErr),
+//                       );
+//                     }
+//                     return;
+//                   }
+
+//                   // Polkadot
+//                   if (chain === "polkadot") {
+//                     try {
+//                       const {
+//                         ApiPromise,
+//                         WsProvider,
+//                         Keyring,
+//                       } = require("@polkadot/api");
+//                       const wsUrl =
+//                         splitPayment.network === "testnet"
+//                           ? process.env.POLKADOT_WS_TESTNET ||
+//                           "wss://pas-rpc.stakeworld.io"
+//                           : process.env.POLKADOT_WS_MAINNET ||
+//                           "wss://rpc.polkadot.io";
+//                       const provider = new WsProvider(wsUrl);
+//                       const api = await ApiPromise.create({ provider });
+
+//                       const keyring = new Keyring({ type: "sr25519" });
+//                       let sender: any = null;
+//                       try {
+//                         // Try mnemonic/uri
+//                         sender = keyring.addFromUri(privateKey);
+//                       } catch (e) {
+//                         // try JSON seed
+//                         const parsed = JSON.parse(privateKey);
+//                         if (parsed.mnemonic)
+//                           sender = keyring.addFromUri(parsed.mnemonic);
+//                         else if (parsed.seed)
+//                           sender = keyring.addFromSeed(
+//                             Buffer.from(parsed.seed, "hex"),
+//                           );
+//                       }
+
+//                       if (!sender)
+//                         throw new Error("Failed to load Polkadot sender key");
+
+//                       const feeUSD = feeCalculations[i]!.fee;
+//                       const dotPrice = await PriceFeedService.getPrice("DOT");
+//                       if (!dotPrice || dotPrice <= 0)
+//                         throw new Error("Invalid DOT price");
+//                       const dotAmount = feeUSD / dotPrice;
+//                       const planck = BigInt(Math.round(dotAmount * 1e10));
+
+//                       const transfer =
+//                         api.tx.balances.transferKeepAlive ||
+//                         api.tx.balances.transfer;
+//                       const tx = transfer(treasuryWallet, planck.toString());
+
+//                       const txHash = await new Promise<string>(
+//                         async (resolve, reject) => {
+//                           try {
+//                             const unsub = await tx.signAndSend(
+//                               sender,
+//                               (result: any) => {
+//                                 const { status, dispatchError } = result;
+//                                 if (dispatchError) {
+//                                   try {
+//                                     if (dispatchError.isModule) {
+//                                       const decoded =
+//                                         api.registry.findMetaError(
+//                                           dispatchError.asModule,
+//                                         );
+//                                       const { section, name, docs } = decoded;
+//                                       reject(
+//                                         new Error(
+//                                           `${section}.${name}: ${docs.join(" ")}`,
+//                                         ),
+//                                       );
+//                                     } else {
+//                                       reject(
+//                                         new Error(dispatchError.toString()),
+//                                       );
+//                                     }
+//                                   } catch (de) {
+//                                     reject(
+//                                       new Error(
+//                                         `Dispatch error: ${dispatchError.toString()}`,
+//                                       ),
+//                                     );
+//                                   }
+//                                   try {
+//                                     unsub();
+//                                   } catch { }
+//                                   return;
+//                                 }
+
+//                                 if (status.isInBlock) {
+//                                   resolve(status.asInBlock.toString());
+//                                   try {
+//                                     unsub();
+//                                   } catch { }
+//                                 } else if (status.isFinalized) {
+//                                   resolve(status.asFinalized.toString());
+//                                   try {
+//                                     unsub();
+//                                   } catch { }
+//                                 }
+//                               },
+//                             );
+//                           } catch (sendErr) {
+//                             reject(
+//                               sendErr instanceof Error
+//                                 ? sendErr
+//                                 : new Error(String(sendErr)),
+//                             );
+//                           }
+//                         },
+//                       );
+
+//                       await FeeCollectionService.completeFeeTransfer(
+//                         feeTx.id,
+//                         txHash,
+//                       );
+//                       console.log(
+//                         "[FeeTransfer][POLKADOT] Completed fee transfer:",
+//                         txHash,
+//                       );
+//                       try {
+//                         await api.disconnect();
+//                       } catch { }
+//                     } catch (dotErr) {
+//                       console.error(
+//                         "[FeeTransfer][POLKADOT] Fee transfer failed:",
+//                         dotErr,
+//                       );
+//                       await FeeCollectionService.failFeeTransfer(
+//                         feeTx.id,
+//                         (dotErr as any)?.message || String(dotErr),
+//                       );
+//                     }
+//                     return;
+//                   }
+
+//                   // If chain not supported yet, leave feeTx pending for sweeper
+//                   console.log(
+//                     "[FeeTransfer] Chain not supported for automatic fee transfer yet:",
+//                     chain,
+//                   );
+//                 } catch (bgErr) {
+//                   console.error(
+//                     "[FeeTransfer] Background fee transfer failed:",
+//                     bgErr,
+//                   );
+//                   try {
+//                     await FeeCollectionService.failFeeTransfer(
+//                       feeTx.id,
+//                       (bgErr as any)?.message || String(bgErr),
+//                     );
+//                   } catch (markErr) {
+//                     console.warn("Failed to mark feeTx as failed:", markErr);
+//                   }
+//                 }
+//               })().catch((e) =>
+//                 console.error("Unexpected BG fee transfer error:", e),
+//               );
+
+//               feeRecords.push({
+//                 recipient: activeRecipients[i]!.recipientAddress,
+//                 amount: recipientAmounts[i],
+//                 fee: feeCalculations[i]!.fee,
+//                 tier: feeCalculations[i]!.tier,
+//                 feeId: feeRecord.id,
+//               });
+
+//               console.log(
+//                 `Fee recorded for ${activeRecipients[i]!.recipientAddress}: $${feeCalculations[i]!.fee.toFixed(2)} (${feeCalculations[i]!.tier})`,
+//               );
+//             }
+//           }
+
+//           console.log(
+//             `Total fees collected: $${totalFees.toFixed(2)} from ${feeRecords.length} successful payments`,
+//           );
+//         } catch (feeError) {
+//           console.error("Fee collection error (non-fatal):", feeError);
+//           // Don't fail the entire split payment if fee collection fails
+//           // The main payments were already executed successfully
+//         }
+//       }
+
+//       res.status(200).json({
+//         message: "Split payment executed successfully",
+//         execution: {
+//           id: savedExecution.id,
+//           status: savedExecution.status,
+//           total: results.length,
+//           successful: successCount,
+//           failed: failedCount,
+//           executionNumber: splitPayment.executionCount,
+//         },
+//         splitPayment: {
+//           id: splitPayment.id,
+//           title: splitPayment.title,
+//           totalExecutions: splitPayment.executionCount,
+//           lastExecutedAt: splitPayment.lastExecutedAt,
+//         },
+//         feeBreakdown: {
+//           totalPaymentAmount: totalPaymentAmount,
+//           totalFees: totalFees,
+//           senderPaysTotal: totalAmountWithFees,
+//           treasuryAddress: treasuryWallet,
+//           feeTxHash: feeTxHash,
+//           feeRecords: feeRecords,
+//         },
+//         results: results.map((r, i) => ({
+//           recipient: activeRecipients[i]!.recipientAddress,
+//           name: activeRecipients[i]!.recipientName,
+//           amount: activeRecipients[i]!.amount,
+//           success: r.success,
+//           txHash: r.txHash,
+//           error: r.error,
+//           fee: feeCalculations[i]?.fee,
+//           tier: feeCalculations[i]?.tier,
+//         })),
+//       });
+//     } catch (error) {
+//       console.error("Execute split payment error:", error);
+//       res.status(500).json({
+//         error: "Failed to execute split payment",
+//         details: error instanceof Error ? error.message : String(error),
+//       });
+//     }
+//   }
+
+  // EXECUTE SPLIT PAYMENT - COMPLETE CORRECTED VERSION
   static async executeSplitPayment(
     req: AuthRequest,
     res: Response,
@@ -559,11 +1313,35 @@ export class SplitPaymentController {
 
       const paymentId = typeof id === "string" ? id : id[0];
 
+      // Extract user ID - handle both req.user.id and req.user.userId
+      const userId = req.user?.id || (req.user as any)?.userId;
+      
+      // Debug logging
+      console.log("Execute split payment - Debug info:");
+      console.log("Payment ID:", paymentId);
+      console.log("User ID extracted:", userId);
+      console.log("Full req.user:", JSON.stringify(req.user, null, 2));
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated - no user ID found" });
+        return;
+      }
+
       const splitPaymentRepo = AppDataSource.getRepository(SplitPayment);
       const splitPayment = await splitPaymentRepo.findOne({
-        where: { id: paymentId as string, userId: req.user!.id! },
+        where: { id: paymentId as string, userId: userId as string },
         relations: ["recipients"],
       });
+
+      console.log("Found split payment:", splitPayment ? "YES" : "NO");
+      if (!splitPayment) {
+        // Try to find the payment without user filter to see if it exists
+        const anyPayment = await splitPaymentRepo.findOne({
+          where: { id: paymentId as string },
+        });
+        console.log("Payment exists for any user:", anyPayment ? "YES (userId: " + anyPayment.userId + ")" : "NO");
+        console.log("Looking for userId:", userId);
+      }
 
       if (!splitPayment) {
         res.status(404).json({ error: "Split payment not found" });
@@ -607,7 +1385,7 @@ export class SplitPaymentController {
       //     }
 
       //     const userRepo = AppDataSource.getRepository('users');
-      //     const userRecord: any = await userRepo.findOne({ where: { id: req.user!.id } });
+      //     const userRecord: any = await userRepo.findOne({ where: { id: userId } });
       //
       //     if (!userRecord?.transactionPin) {
       //         res.status(400).json({ error: 'Transaction PIN not set' });
@@ -630,7 +1408,7 @@ export class SplitPaymentController {
 
       let userAddress = await userAddressRepo.findOne({
         where: {
-          userId: req.user!.id!,
+          userId: userId as string,
           address: splitPayment.fromAddress,
           chain: splitPayment.chain as ChainType,
           network: splitPayment.network as NetworkType,
@@ -642,7 +1420,7 @@ export class SplitPaymentController {
         const shortAddr = splitPayment.fromAddress.replace(/^0x0+/, "0x");
         userAddress = await userAddressRepo.findOne({
           where: {
-            userId: req.user!.id!,
+            userId: userId as string,
             address: shortAddr,
             chain: splitPayment.chain as ChainType,
             network: splitPayment.network as NetworkType,
@@ -819,7 +1597,7 @@ export class SplitPaymentController {
               // Create a Transaction record for this fee transfer first so the
               // Fee record can reference it (DB enforces FK to transactions.id).
               const feeTx = await FeeCollectionService.createFeeTransferRecord({
-                userId: req.user!.id as string,
+                userId: userId as string,
                 feeAmount: feeCalculations[i]!.fee.toString(),
                 chain: splitPayment.chain,
                 network: splitPayment.network,
@@ -834,7 +1612,7 @@ export class SplitPaymentController {
               };
 
               const feeRecord = await FeeCollectionService.recordFee({
-                userId: req.user!.id as string,
+                userId: userId as string,
                 // Reference the transaction created above
                 transactionId: feeTx.id,
                 calculation: calculationWithOnchain,
@@ -1297,7 +2075,7 @@ export class SplitPaymentController {
       });
     }
   }
-
+  
   private static async processStarknetBatch(
     splitPayment: SplitPayment,
     recipients: SplitPaymentRecipient[],
@@ -1324,6 +2102,10 @@ export class SplitPaymentController {
         tokenSymbol = "dai";
       }
       // If chain is just 'starknet' or 'starknet_strk' or 'strk', use STRK (already set)
+
+      // Get token price for USD conversion
+      const tokenPriceUSD = await PriceFeedService.getPrice(tokenSymbol.toUpperCase());
+      console.log(`Current ${tokenSymbol.toUpperCase()} price: $${tokenPriceUSD}`);
 
       console.log("Starknet batch transfer setup:", {
         token: tokenSymbol.toUpperCase(),
@@ -1421,9 +2203,9 @@ export class SplitPaymentController {
           `\n💰 Current ${tokenSymbol.toUpperCase()} balance: ${balanceInToken.toFixed(6)}`,
         );
 
-        // Calculate total needed
+        // Calculate total needed - convert USD to token amount
         const totalTransferAmount = recipients.reduce(
-          (sum, r) => sum + parseFloat(r.amount),
+          (sum, r) => sum + (parseFloat(r.amount) / tokenPriceUSD),
           0,
         );
         const estimatedFeesInToken = 0.001 * recipients.length; // Conservative estimate
@@ -1468,7 +2250,9 @@ export class SplitPaymentController {
 
         try {
           const recipientAddr = recipient!.recipientAddress;
-          const amountNum = parseFloat(recipient!.amount);
+          // Convert USD amount to token amount
+          const usdAmount = parseFloat(recipient!.amount);
+          const amountNum = usdAmount / tokenPriceUSD;
 
           console.log(`[${i + 1}/${recipients.length}] Processing payment:`, {
             to: recipientAddr,
@@ -1583,6 +2367,10 @@ export class SplitPaymentController {
       txHash?: string;
       error?: string;
     }> = [];
+
+    // Get XLM price for USD conversion
+    const xlmPriceUSD = await PriceFeedService.getPrice('XLM');
+    console.log(`Current XLM price: $${xlmPriceUSD}`);
 
     const StellarSdkLocal = getStellarSdk();
 
@@ -1710,7 +2498,10 @@ export class SplitPaymentController {
         const recipient = recipients[i];
         try {
           const dest = recipient!.recipientAddress;
-          const amountStr = Number(recipient!.amount).toFixed(7);
+          // Convert USD to XLM
+          const usdAmount = Number(recipient!.amount);
+          const xlmAmount = usdAmount / xlmPriceUSD;
+          const amountStr = xlmAmount.toFixed(7);
 
           console.log(`Processing payment ${i + 1}/${recipients.length}:`, {
             to: dest,
@@ -1818,6 +2609,10 @@ export class SplitPaymentController {
 
     if (!recipients || recipients.length === 0) return results;
 
+    // Get DOT price for USD conversion
+    const dotPriceUSD = await PriceFeedService.getPrice('DOT');
+    console.log(`Current DOT price: $${dotPriceUSD}`);
+
     try {
       // Load Polkadot SDK
       const { ApiPromise, WsProvider } = require("@polkadot/api");
@@ -1916,21 +2711,19 @@ export class SplitPaymentController {
 
       console.log(`[Polkadot Split] Sender balance: ${balanceDOT} DOT`);
 
-      // Calculate total amount needed
-      const totalTransferAmount = recipients.reduce(
-        (sum, recipient) => sum + Number(recipient.amount),
+      // Convert USD amounts to DOT for balance checking
+      const totalTransferAmountDOT = recipients.reduce(
+        (sum, r) => sum + (Number(r.amount) / dotPriceUSD),
         0,
       );
-
-      // Estimate fees (conservative: 0.01 DOT per transaction)
       const estimatedFeePerTx = 0.01;
       const totalEstimatedFees = estimatedFeePerTx * recipients.length;
-      const totalNeeded = totalTransferAmount + totalEstimatedFees;
+      const totalNeeded = totalTransferAmountDOT + totalEstimatedFees;
 
       if (balanceDOT < totalNeeded) {
         throw new Error(
           `Insufficient balance. Available: ${balanceDOT} DOT, ` +
-          `Required: ${totalNeeded} DOT (${totalTransferAmount} transfers + ${totalEstimatedFees} fees)`,
+          `Required: ${totalNeeded} DOT (${totalTransferAmountDOT} transfers + ${totalEstimatedFees} fees)`,
         );
       }
 
@@ -1940,7 +2733,9 @@ export class SplitPaymentController {
 
         try {
           const dest = recipient!.recipientAddress;
-          const amountDOT = Number(recipient!.amount);
+          // Convert USD to DOT
+          const usdAmount = Number(recipient!.amount);
+          const amountDOT = usdAmount / dotPriceUSD;
           const planck = BigInt(Math.round(amountDOT * 1e10));
 
           console.log(
@@ -2248,6 +3043,172 @@ export class SplitPaymentController {
     }
   }
 
+  static async updateSplitPayment(
+    req: AuthRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { title, description, recipients } = req.body;
+
+      if (!id) {
+        res.status(400).json({ error: "Missing split payment ID" });
+        return;
+      }
+
+      const paymentId = typeof id === "string" ? id : id[0];
+
+      const splitPaymentRepo = AppDataSource.getRepository(SplitPayment);
+      const splitPayment = await splitPaymentRepo.findOne({
+        where: { id: paymentId as string, userId: req.user!.id as string },
+        relations: ["recipients"],
+      });
+
+      if (!splitPayment) {
+        res.status(404).json({ error: "Split payment not found" });
+        return;
+      }
+
+      // Update title and description if provided
+      if (title !== undefined) {
+        splitPayment.title = title;
+      }
+      if (description !== undefined) {
+        splitPayment.description = description;
+      }
+
+      // Update recipients if provided
+      if (recipients && Array.isArray(recipients)) {
+        if (recipients.length === 0) {
+          res.status(400).json({ error: "Recipients array cannot be empty" });
+          return;
+        }
+
+        if (recipients.length > 1000) {
+          res.status(400).json({ error: "Maximum 1000 recipients allowed" });
+          return;
+        }
+
+        // Validate recipients
+        const userRepo = AppDataSource.getRepository(User);
+        const isStarknetChain = 
+          splitPayment.chain === "starknet" ||
+          splitPayment.chain === "strk" ||
+          splitPayment.chain.startsWith("starknet_");
+
+        for (const recipient of recipients) {
+          if (!recipient.amount || Number(recipient.amount) <= 0) {
+            res.status(400).json({ error: "All recipient amounts must be positive" });
+            return;
+          }
+
+          // Resolve username if provided
+          if (!recipient.address && recipient.username) {
+            const targetUser = await userRepo.findOne({
+              where: { username: recipient.username },
+              relations: ["addresses"],
+            });
+
+            if (!targetUser) {
+              res.status(404).json({ error: `Username not found: ${recipient.username}` });
+              return;
+            }
+
+            const matchedAddresses = (targetUser.addresses || []).filter((a) =>
+              String(a.chain) === String(splitPayment.chain) &&
+              String(a.network) === String(splitPayment.network)
+            );
+
+            if (matchedAddresses.length === 0) {
+              res.status(404).json({
+                error: `Username ${recipient.username} has no address on ${splitPayment.chain}/${splitPayment.network}`,
+              });
+              return;
+            }
+
+            if (matchedAddresses.length > 1) {
+              res.status(409).json({
+                error: `Multiple addresses found for username ${recipient.username}`,
+              });
+              return;
+            }
+
+            recipient.address = matchedAddresses[0]!.address;
+          }
+
+          if (!recipient.address) {
+            res.status(400).json({ 
+              error: "Each recipient must have address or username and amount" 
+            });
+            return;
+          }
+        }
+
+        // Normalize addresses for Starknet
+        const normalizedRecipients = isStarknetChain
+          ? recipients.map((r) => ({
+              ...r,
+              address: normalizeStarknetAddress(r.address),
+            }))
+          : recipients;
+
+        // Delete existing recipients
+        const recipientRepo = AppDataSource.getRepository(SplitPaymentRecipient);
+        await recipientRepo.delete({ splitPaymentId: splitPayment.id });
+
+        // Create new recipients
+        const newRecipients = normalizedRecipients.map((r) =>
+          recipientRepo.create({
+            splitPaymentId: splitPayment.id,
+            recipientAddress: r.address,
+            amount: String(r.amount),
+            recipientName: r.name || r.description || "",
+            isActive: true,
+          })
+        );
+
+        await recipientRepo.save(newRecipients);
+        splitPayment.recipients = newRecipients;
+
+        // Recalculate total amount
+        splitPayment.totalAmount = newRecipients.reduce(
+          (sum, r) => sum + Number(r.amount),
+          0
+        ).toString();
+      }
+
+      await splitPaymentRepo.save(splitPayment);
+
+      res.status(200).json({
+        message: "Split payment updated successfully",
+        splitPayment: {
+          id: splitPayment.id,
+          title: splitPayment.title,
+          description: splitPayment.description,
+          chain: splitPayment.chain,
+          network: splitPayment.network,
+          fromAddress: splitPayment.fromAddress,
+          totalAmount: splitPayment.totalAmount,
+          status: splitPayment.status,
+          recipients: splitPayment.recipients.map((r) => ({
+            address: r.recipientAddress,
+            amount: r.amount,
+            name: r.recipientName,
+            isActive: r.isActive,
+          })),
+          createdAt: splitPayment.createdAt,
+          updatedAt: splitPayment.updatedAt,
+        },
+      });
+    } catch (error) {
+      console.error("Update split payment error:", error);
+      res.status(500).json({ 
+        error: "Failed to update split payment",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
   // Private methods for processing different chains
   private static async processEthereumBatch(
     splitPayment: SplitPayment,
@@ -2262,13 +3223,20 @@ export class SplitPaymentController {
     );
     const wallet = new ethers.Wallet(privateKey, provider);
 
+    // Get ETH price for USD conversion
+    const ethPriceUSD = await PriceFeedService.getPrice('ETH');
+    console.log(`Current ETH price: $${ethPriceUSD}`);
+
     for (const recipient of recipients) {
       try {
         let tx;
         if (splitPayment.chain === "ethereum") {
+          // Convert USD amount to ETH
+          const usdAmount = Number(recipient.amount);
+          const ethAmount = usdAmount / ethPriceUSD;
           tx = await wallet.sendTransaction({
             to: recipient.recipientAddress,
-            value: ethers.parseEther(recipient.amount),
+            value: ethers.parseEther(ethAmount.toString()),
           });
         } else {
           // USDT ERC20
@@ -2344,6 +3312,10 @@ export class SplitPaymentController {
     );
 
     try {
+      // Get SOL price in USD for conversion
+      const solPriceUSD = await PriceFeedService.getPrice('SOL');
+      console.log(`Current SOL price: $${solPriceUSD}`);
+
       let secretKeyArray: Uint8Array;
       try {
         const parsed = JSON.parse(privateKey);
@@ -2377,8 +3349,13 @@ export class SplitPaymentController {
         await connection.getMinimumBalanceForRentExemption(0);
 
       // Calculate total amount needed (transfers + fees + rent buffer)
+      // Convert USD amounts to SOL
       const totalTransferAmount = recipients.reduce(
-        (sum, recipient) => sum + Math.round(Number(recipient.amount) * 1e9),
+        (sum, recipient) => {
+          const usdAmount = Number(recipient.amount);
+          const solAmount = usdAmount / solPriceUSD;
+          return sum + Math.round(solAmount * 1e9);
+        },
         0,
       );
 
@@ -2399,7 +3376,10 @@ export class SplitPaymentController {
       for (const recipient of recipients) {
         try {
           const toPubkey = new PublicKey(recipient.recipientAddress);
-          const transferAmount = Math.round(Number(recipient.amount) * 1e9);
+          // Convert USD amount to SOL, then to lamports
+          const usdAmount = Number(recipient.amount);
+          const solAmount = usdAmount / solPriceUSD;
+          const transferAmount = Math.round(solAmount * 1e9);
 
           // Check if recipient account exists and needs rent
           const recipientInfo = await connection.getAccountInfo(toPubkey);
@@ -2471,6 +3451,10 @@ export class SplitPaymentController {
     privateKey: string,
   ): Promise<string> {
     try {
+      // Get BTC price for USD conversion
+      const btcPriceUSD = await PriceFeedService.getPrice('BTC');
+      console.log(`Current BTC price: $${btcPriceUSD}`);
+
       // Setup network
       const isTestnet = network === "testnet";
       const btcNetwork = isTestnet
@@ -2494,10 +3478,13 @@ export class SplitPaymentController {
         );
       }
 
-      // Calculate total amount needed
+      // Calculate total amount needed - convert USD to BTC then to satoshis
       const totalTransferAmount = recipients.reduce(
-        (sum, recipient) =>
-          sum + Math.round(parseFloat(recipient.amount) * 100000000),
+        (sum, recipient) => {
+          const usdAmount = parseFloat(recipient.amount);
+          const btcAmount = usdAmount / btcPriceUSD;
+          return sum + Math.round(btcAmount * 100000000);
+        },
         0,
       );
 
@@ -2581,7 +3568,10 @@ export class SplitPaymentController {
 
       // Add outputs for each recipient
       for (const recipient of recipients) {
-        const amount = Math.round(parseFloat(recipient.amount) * 100000000);
+        // Convert USD to BTC then to satoshis
+        const usdAmount = parseFloat(recipient.amount);
+        const btcAmount = usdAmount / btcPriceUSD;
+        const amount = Math.round(btcAmount * 100000000);
 
         if (amount < 546) {
           // Bitcoin dust threshold

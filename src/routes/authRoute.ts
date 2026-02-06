@@ -258,6 +258,121 @@ router.post(
 
 /**
  * @swagger
+ * /auth/profile:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get current user profile
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 phoneNumber:
+ *                   type: string
+ *                 createdAt:
+ *                   type: string
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+// Get user profile
+router.get("/profile", authMiddleware, AuthController.getProfile);
+
+/**
+ * @swagger
+ * /auth/profile:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Update current user profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Username (must be unique)
+ *                 example: "john_doe"
+ *               firstName:
+ *                 type: string
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 example: "Doe"
+ *               phoneNumber:
+ *                 type: string
+ *                 example: "+1234567890"
+ *               transactionPin:
+ *                 type: string
+ *                 description: Set or update 4-digit transaction PIN
+ *                 example: "1234"
+ *           examples:
+ *             updateUsername:
+ *               summary: Update username
+ *               value:
+ *                 username: "new_username"
+ *             updateProfile:
+ *               summary: Update full profile
+ *               value:
+ *                 username: "john_doe"
+ *                 firstName: "John"
+ *                 lastName: "Doe"
+ *                 phoneNumber: "+1234567890"
+ *             setTransactionPin:
+ *               summary: Set transaction PIN
+ *               value:
+ *                 transactionPin: "1234"
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Profile updated successfully"
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   examples:
+ *                     - "Username already taken"
+ *                     - "Transaction PIN must be 4 digits"
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+// Update user profile
+router.patch("/profile", authMiddleware, AuthController.updateProfile);
+
+/**
+ * @swagger
  * /auth/logout:
  *   post:
  *     tags: [Auth]
