@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger";
+import { swaggerBasicAuth } from "./middleware/swaggerBasicAuth";
 import authRouter from "./routes/authRoute";
 import walletRouter from "./routes/walletRoute";
 import notificationRouter from "./routes/notificationRoute";
@@ -14,8 +15,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Swagger UI setup
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger UI setup (protected with Basic Auth)
+app.use("/api-docs", swaggerBasicAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /**
  * @swagger
