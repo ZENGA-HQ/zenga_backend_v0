@@ -18,4 +18,4 @@ jobs:
           -H 'accept: application/json' \
           -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
           -H 'Content-Type: application/json' \
-          -d '{ "composedId": "${{ secrets.DOKPLOY_COMPOSED_ID }}" }'
+          -d '{ "composeId": "${{ secrets.DOKPLOY_COMPOSED_ID }}" }'
