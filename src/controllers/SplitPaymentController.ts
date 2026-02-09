@@ -15,6 +15,7 @@ import { UserAddress } from "../entities/UserAddress";
 import { User } from "../entities/User";
 import { Notification } from "../entities/Notification";
 import { NotificationType } from "../types/index";
+import { NotificationService } from "../services/notificationService";
 import { ethers } from "ethers";
 import {
   Connection,
@@ -1575,6 +1576,48 @@ export class SplitPaymentController {
       splitPayment.executionCount += 1;
       splitPayment.lastExecutedAt = new Date();
       await splitPaymentRepo.save(splitPayment);
+
+      // Best-effort: notify recipients for successful payments
+      try {
+        const addressRepo = AppDataSource.getRepository(UserAddress);
+        const notificationCurrency = "USD";
+        const tokenCurrency = splitPayment.currency || getCurrencyFromChain(splitPayment.chain);
+
+        for (let i = 0; i < results.length; i++) {
+          if (!results[i]!.success) {
+            continue;
+          }
+          const recipientAddress = activeRecipients[i]!.recipientAddress;
+          const recipientAddressRecord = await addressRepo.findOne({
+            where: {
+              address: recipientAddress,
+              chain: splitPayment.chain as ChainType,
+              network: splitPayment.network as NetworkType,
+            },
+          });
+
+          if (!recipientAddressRecord?.userId) {
+            continue;
+          }
+
+          await NotificationService.notifyReceiveMoney(
+            recipientAddressRecord.userId,
+            String(activeRecipients[i]!.amount),
+            notificationCurrency,
+            splitPayment.fromAddress,
+            results[i]!.txHash,
+            {
+              chain: splitPayment.chain,
+              network: splitPayment.network,
+              tokenCurrency,
+              splitPaymentId: splitPayment.id,
+              executionId: savedExecution.id,
+            },
+          );
+        }
+      } catch (notifyErr) {
+        console.warn("Split payment recipient notification failed:", notifyErr);
+      }
 
       // ===== STEP 4: Execute fee collection (only if there were successful payments) =====
       let feeTxHash: string | undefined;

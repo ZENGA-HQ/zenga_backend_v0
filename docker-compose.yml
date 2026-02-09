@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: zenga_app:latest
     ports:
-      - "5500"
+      - "5500:5500"
     environment:
       - NODE_ENV=production
       - PORT=5500
@@ -48,7 +48,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - "5432"
+      - "5432:5432"
     volumes:
       - zenga_db:/var/lib/postgresql/data
     restart: unless-stopped

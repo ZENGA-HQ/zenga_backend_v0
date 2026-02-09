@@ -673,51 +673,52 @@ export class WalletController {
       }
 
       // Enforce transaction PIN unless explicitly bypassed via env var
-      try {
-        const skipPin = process.env.SKIP_TRANSACTION_PIN === "true";
-        if (!skipPin) {
-          // Accept either `transactionPin` or `pin` for backwards compatibility
-          const providedPinRaw = req.body?.transactionPin ?? req.body?.pin;
-          if (providedPinRaw === undefined || providedPinRaw === null) {
-            res.status(400).json({
-              error: "Missing transactionPin (or pin) in request body",
-            });
-            return;
-          }
-          const providedPin = String(providedPinRaw);
+      // NOTE: Transaction PIN enforcement temporarily disabled.
+      // try {
+      //   const skipPin = process.env.SKIP_TRANSACTION_PIN === "true";
+      //   if (!skipPin) {
+      //     // Accept either `transactionPin` or `pin` for backwards compatibility
+      //     const providedPinRaw = req.body?.transactionPin ?? req.body?.pin;
+      //     if (providedPinRaw === undefined || providedPinRaw === null) {
+      //       res.status(400).json({
+      //         error: "Missing transactionPin (or pin) in request body",
+      //       });
+      //       return;
+      //     }
+      //     const providedPin = String(providedPinRaw);
 
-          // Load fresh user record to get hashed PIN
-          const userRepo = AppDataSource.getRepository("users");
-          const userRecord: any = await userRepo.findOne({
-            where: { id: userId },
-          });
-          if (!userRecord) {
-            res.status(401).json({ error: "Unauthorized" });
-            return;
-          }
+      //     // Load fresh user record to get hashed PIN
+      //     const userRepo = AppDataSource.getRepository("users");
+      //     const userRecord: any = await userRepo.findOne({
+      //       where: { id: userId },
+      //     });
+      //     if (!userRecord) {
+      //       res.status(401).json({ error: "Unauthorized" });
+      //       return;
+      //     }
 
-          if (!userRecord.transactionPin) {
-            res.status(400).json({
-              error:
-                "Transaction PIN not set. Please set a transaction PIN before sending funds.",
-            });
-            return;
-          }
+      //     if (!userRecord.transactionPin) {
+      //       res.status(400).json({
+      //         error:
+      //           "Transaction PIN not set. Please set a transaction PIN before sending funds.",
+      //       });
+      //       return;
+      //     }
 
-          const pinMatches = await bcrypt.compare(
-            providedPin,
-            userRecord.transactionPin
-          );
-          if (!pinMatches) {
-            res.status(403).json({ error: "Invalid transaction PIN" });
-            return;
-          }
-        }
-      } catch (pinErr) {
-        console.error("Transaction PIN verification error:", pinErr);
-        res.status(500).json({ error: "Failed to verify transaction PIN" });
-        return;
-      }
+      //     const pinMatches = await bcrypt.compare(
+      //       providedPin,
+      //       userRecord.transactionPin
+      //     );
+      //     if (!pinMatches) {
+      //       res.status(403).json({ error: "Invalid transaction PIN" });
+      //       return;
+      //     }
+      //   }
+      // } catch (pinErr) {
+      //   console.error("Transaction PIN verification error:", pinErr);
+      //   res.status(500).json({ error: "Failed to verify transaction PIN" });
+      //   return;
+      // }
       if (Number(amount) <= 0) {
         res.status(400).json({ error: "Amount must be positive." });
         return;
@@ -3089,17 +3090,49 @@ export class WalletController {
             };
           } else if (addr.chain === "solana") {
             const key = "sol_test";
-            if (!providers[key])
-              providers[key] = new Connection(
-                `https://solana-devnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`
-              );
-            const connection = providers[key];
+            const alchemyKey = process.env.ALCHEMY_STARKNET_KEY;
+            const alchemyUrl = alchemyKey
+              ? `https://solana-devnet.g.alchemy.com/v2/${alchemyKey}`
+              : null;
+            const publicUrl = "https://api.devnet.solana.com";
+
+            if (!providers[key]) {
+              providers[key] = new Connection(alchemyUrl || publicUrl);
+            }
+
             const publicKey = new PublicKey(addr.address as string);
-            const bal: any = await withTimeout(
-              connection.getBalance(publicKey) as any,
-              6000
-            );
-            const balanceInSOL = bal / 1e9;
+            let balanceInSOL = 0;
+
+            try {
+              const connection = providers[key];
+              const bal: any = await withTimeout(
+                connection.getBalance(publicKey) as any,
+                6000
+              );
+              balanceInSOL = bal / 1e9;
+            } catch (err) {
+              if (alchemyUrl) {
+                try {
+                  const fallback = new Connection(publicUrl);
+                  const bal: any = await withTimeout(
+                    fallback.getBalance(publicKey) as any,
+                    6000
+                  );
+                  balanceInSOL = bal / 1e9;
+                } catch (fallbackErr) {
+                  console.warn(
+                    "Solana devnet balance fallback failed:",
+                    (fallbackErr as any)?.message || String(fallbackErr)
+                  );
+                }
+              } else {
+                console.warn(
+                  "Solana devnet balance fetch failed:",
+                  (err as any)?.message || String(err)
+                );
+              }
+            }
+
             try {
               addr.lastKnownBalance = balanceInSOL;
               addressRepo.save(addr).catch(() => { });

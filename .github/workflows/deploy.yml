@@ -1,0 +1,21 @@
+name: Deploy to Dokploy
+
+on: 
+  push: 
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trigger Dokploy Deployment
+        run: |
+          curl -X 'POST' \
+          'https://zenga-api.thebuidl.xyz/api/compose.deploy' \
+          -H 'accept: application/json' \
+          -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
+          -H 'Content-Type: application/json' \
+          -d '{ "composedId": "${{ secrets.DOKPLOY_COMPOSED_ID }}" }'
