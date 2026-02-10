@@ -18,22 +18,20 @@ jobs:
         run: |
           echo "🚀 Triggering deployment..."
           echo "📍 Branch: ${GITHUB_REF_NAME}"
-          echo "🔍 Webhook URL length: ${#DOKPLOY_WEBHOOK_URL}"
           
-          # Debug: Show first/last chars of URL (without exposing full URL)
-          echo "🔍 URL starts with: $(echo ${DOKPLOY_WEBHOOK_URL} | cut -c1-30)..."
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"ref\": \"refs/heads/${GITHUB_REF_NAME}\"}" \
+            "${DOKPLOY_WEBHOOK_URL}")
           
-          # Try with verbose to see what's happening
-          response=$(curl -v -L -X POST "${DOKPLOY_WEBHOOK_URL}" 2>&1)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
           
-          echo "Full response:"
-          echo "$response"
+          echo "📡 Response: $body"
+          echo "📊 HTTP Status: $http_code"
           
-          # Extract actual response
-          http_code=$(echo "$response" | grep -o "< HTTP.*" | tail -1 | awk '{print $3}')
-          
-          if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
-            echo "❌ DEPLOYMENT FAILED - Status: $http_code"
+          if [ "$http_code" != "200" ]; then
+            echo "❌ DEPLOYMENT FAILED"
             exit 1
           fi
           
