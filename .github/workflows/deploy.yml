@@ -13,4 +13,4 @@ jobs:
 
       - name: Trigger Dokploy Deployment
         run: |
-          curl -X 'POST' 'http://localhost:3000/api/deploy/compose/m2djzWorLBFcvHBDTgY_9'
+          curl -X 'POST' 'http://localhost:3000/api/deploy/compose/NRhnRr_01r7ghCXQW6QUr'
