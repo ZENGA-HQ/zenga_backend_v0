@@ -12,22 +12,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trigger Dokploy Deployment
-        env:
-          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
         run: |
-          echo "Triggering deployment for compose: ${DOKPLOY_COMPOSE_ID}"
+          COMPOSE_ID="NRhnRr_01r7ghCXQW6QUr"
+          
+          echo "🚀 Triggering deployment for compose: ${COMPOSE_ID}"
           
           response=$(curl -s -w "\n%{http_code}" -X 'POST' \
-            "http://localhost:3000/api/deploy/compose/${DOKPLOY_COMPOSE_ID}")
+            "http://localhost:3000/api/deploy/compose/${COMPOSE_ID}")
           
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
           
-          echo "Response: $body"
-          echo "Status Code: $http_code"
+          echo "📡 Response: $body"
+          echo "📊 Status Code: $http_code"
           
           if [ "$http_code" != "200" ]; then
-            echo "❌ Deployment failed with status code: $http_code"
+            echo "❌ DEPLOYMENT FAILED"
+            echo "❌ Status Code: $http_code"
+            echo "❌ Response: $body"
+            echo "❌ Compose ID: $COMPOSE_ID"
             exit 1
           fi
           
