@@ -6,16 +6,11 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Trigger Dokploy Deployment
         run: |
-          curl -X 'POST' \
-          'https://zenga-api.thebuidl.xyz/api/compose.deploy' \
-          -H 'accept: application/json' \
-          -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
-          -H 'Content-Type: application/json' \
-          -d '{ "composeId": "${{ secrets.DOKPLOY_COMPOSED_ID }}" }'
+          curl -X 'POST' 'http://localhost:3000/api/deploy/compose/m2djzWorLBFcvHBDTgY_9'
