@@ -1244,18 +1244,18 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
       user.emailOTPExpiry = getOTPExpiry();
       await userRepository.save(user);
 
-      // Send OTP email using Mailtrap (temporarily disabled)
-      // try {
-      //   await sendMailtrapMail({
-      //     to: email,
-      //     subject: "Your OTP Code",
-      //     text: `Your OTP code is: ${otp}`,
-      //     html: resendOtpTemplate(email, otp),
-      //   });
-      // } catch (mailErr) {
-      //   console.error("Mailtrap send error:", mailErr);
-      // }
-      console.log(`OTP for ${email}: ${otp}`);
+      // Send OTP email using Mailtrap
+      try {
+        await sendMailtrapMail({
+          to: email,
+          subject: "Your OTP Code",
+          text: `Your OTP code is: ${otp}`,
+          html: resendOtpTemplate(email, otp),
+        });
+      } catch (mailErr) {
+        console.error("Mailtrap send error:", mailErr);
+      }
+      console.log(`OTP sent to ${email}. OTP: ${otp}`);
 
       // Create notification for OTP resend
       try {
@@ -1629,21 +1629,21 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
       user.passwordResetExpiry = resetExpiry;
       await userRepository.save(user);
 
-      // Send password reset email (temporarily disabled)
-      // try {
-      //   await sendMailtrapMail({
-      //     to: email,
-      //     subject: "Password Reset Request",
-      //     text: passwordResetRequestText(email, resetToken),
-      //     html: passwordResetRequestTemplate(email, resetToken),
-      //   });
+      // Send password reset email
+      try {
+        await sendMailtrapMail({
+          to: email,
+          subject: "Password Reset Request",
+          text: passwordResetRequestText(email, resetToken),
+          html: passwordResetRequestTemplate(email, resetToken),
+        });
 
-      //   console.log(`Password reset email sent to: ${email}`);
-      //   console.log(`Reset token: ${resetToken} (expires: ${resetExpiry})`);
-      // } catch (emailError) {
-      //   console.error("Failed to send reset email:", emailError);
-      //   // Still return success to not reveal email existence
-      // }
+        console.log(`Password reset email sent to: ${email}`);
+        console.log(`Reset token: ${resetToken} (expires: ${resetExpiry})`);
+      } catch (emailError) {
+        console.error("Failed to send reset email:", emailError);
+        // Still return success to not reveal email existence
+      }
 
       // Create notification
       try {
@@ -1847,20 +1847,20 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
         { isRevoked: true },
       );
 
-      // Send password change confirmation email (temporarily disabled)
-      // try {
-      //   await sendMailtrapMail({
-      //     to: email,
-      //     subject: "Password Changed Successfully",
-      //     text: passwordChangedText(email),
-      //     html: passwordChangedTemplate(email),
-      //   });
-      // } catch (emailError) {
-      //   console.error(
-      //     "Failed to send password change confirmation:",
-      //     emailError,
-      //   );
-      // }
+      // Send password change confirmation email
+      try {
+        await sendMailtrapMail({
+          to: email,
+          subject: "Password Changed Successfully",
+          text: passwordChangedText(email),
+          html: passwordChangedTemplate(email),
+        });
+      } catch (emailError) {
+        console.error(
+          "Failed to send password change confirmation:",
+          emailError,
+        );
+      }
 
       // Create notification
       try {
