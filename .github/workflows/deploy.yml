@@ -21,7 +21,7 @@ jobs:
           
           response=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Content-Type: application/json" \
-            -d "{\"ref\": \"refs/heads/${GITHUB_REF_NAME}\"}" \
+            -d "{\"ref\": \"${GITHUB_REF_NAME}\"}" \
             "${DOKPLOY_WEBHOOK_URL}")
           
           http_code=$(echo "$response" | tail -n1)
