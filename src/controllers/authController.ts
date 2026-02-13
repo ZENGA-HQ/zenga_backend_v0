@@ -105,21 +105,35 @@ export class AuthController {
         targetUserType = UserType.COMPANY;
 
         const companyRepo = AppDataSource.getRepository(Company);
-        
+
         // Check if company email already exists
-        const existingCompany = await companyRepo.findOne({ 
-          where: { companyEmail: email } 
+        const existingCompany = await companyRepo.findOne({
+          where: { companyEmail: email }
         });
         if (existingCompany) {
           res.status(409).json({ error: "Company email already registered" });
           return;
         }
-        
+
         const company = companyRepo.create({
           companyName,
           companyEmail: email,
         });
         await companyRepo.save(company);
+
+        // Ensure company code is generated (in case BeforeInsert didn't fire)
+        if (!company.companyCode) {
+          const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+          let code = "";
+          const crypto = await import("crypto");
+          const bytes = crypto.randomBytes(8);
+          for (let i = 0; i < 8; i++) {
+            code += chars[bytes[i] % chars.length];
+          }
+          company.companyCode = code;
+          await companyRepo.save(company);
+        }
+
         companyId = company.id;
         companyCodeValue = company.companyCode;
         console.log(
@@ -165,16 +179,16 @@ export class AuthController {
 
       // ===== ENHANCED WALLET GENERATION WITH VALIDATION =====
       console.log(`[DEBUG] Generating wallets for: ${user.id}`);
-      
+
       const eth = generateEthWallet();
       console.log('[DEBUG] ✅ ETH wallet generated:', eth.mainnet.address);
-      
+
       const btc = generateBtcWallet();
       console.log('[DEBUG] ✅ BTC wallet generated:', btc.mainnet.address);
-      
+
       const sol = generateSolWallet();
       console.log('[DEBUG] ✅ SOL wallet generated:', sol.mainnet.address);
-      
+
       // CRITICAL: Test Stellar generation
       const stellar = generateStellarWallet();
       console.log('[DEBUG] Stellar wallet generation result:', {
@@ -184,14 +198,14 @@ export class AuthController {
         hasPrivateKey: !!stellar.mainnet.privateKey,
         addressLength: stellar.mainnet.address?.length || 0
       });
-      
+
       if (!stellar.mainnet.address) {
         console.error('[ERROR] ❌ Stellar wallet generation FAILED - empty address!');
         console.error('[ERROR] Please install: npm install @stellar/stellar-sdk');
       } else {
         console.log('[DEBUG] ✅ Stellar wallet generated:', stellar.mainnet.address);
       }
-      
+
       // CRITICAL: Test Polkadot generation
       const polkadot = await generatePolkadotWallet();
       console.log('[DEBUG] Polkadot wallet generation result:', {
@@ -202,20 +216,20 @@ export class AuthController {
         mnemonic: polkadot.mnemonic ? '[PRESENT]' : '[MISSING]',
         addressLength: polkadot.mainnet.address?.length || 0
       });
-      
+
       if (!polkadot.mainnet.address) {
         console.error('[ERROR] ❌ Polkadot wallet generation FAILED - empty address!');
         console.error('[ERROR] Please install: npm install @polkadot/util-crypto @polkadot/keyring');
       } else {
         console.log('[DEBUG] ✅ Polkadot wallet generated:', polkadot.mainnet.address);
       }
-      
+
       const strk = generateStrkWallet();
       console.log('[DEBUG] ✅ STRK wallet generated:', strk.mainnet.address);
-      
+
       const usdcWallets = generateUsdcWallet();
       console.log('[DEBUG] ✅ USDC wallets generated');
-      
+
       const tron = generateEthWallet();
       console.log('[DEBUG] ✅ Tron wallet generated');
 
@@ -347,11 +361,11 @@ export class AuthController {
       console.log(
         `[DEBUG] Saving ${fullAddresses.length} addresses for user: ${user.id}`,
       );
-      
+
       const addressRepo = AppDataSource.getRepository(UserAddress);
       let savedCount = 0;
       let skippedCount = 0;
-      
+
       for (const addr of fullAddresses) {
         try {
           // VALIDATE: Skip empty addresses
@@ -360,7 +374,7 @@ export class AuthController {
             skippedCount++;
             continue;
           }
-          
+
           // VALIDATE: Check ChainType enum exists
           const chainKey = addr.chain.toUpperCase().replace(/-/g, '_');
           if (!ChainType[chainKey as keyof typeof ChainType]) {
@@ -369,7 +383,7 @@ export class AuthController {
             skippedCount++;
             continue;
           }
-          
+
           // VALIDATE: Check NetworkType enum exists
           const networkKey = addr.network.toUpperCase();
           if (!NetworkType[networkKey as keyof typeof NetworkType]) {
@@ -378,7 +392,7 @@ export class AuthController {
             skippedCount++;
             continue;
           }
-          
+
           await addressRepo.save({
             address: addr.address,
             encryptedPrivateKey: addr.encryptedPrivateKey,
@@ -387,7 +401,7 @@ export class AuthController {
             chain: ChainType[chainKey as keyof typeof ChainType],
             network: NetworkType[networkKey as keyof typeof NetworkType],
           });
-          
+
           savedCount++;
           console.log(`[DEBUG] ✅ Saved ${addr.chain}/${addr.network}:`, addr.address.substring(0, 20) + '...');
         } catch (err) {
@@ -395,7 +409,7 @@ export class AuthController {
           skippedCount++;
         }
       }
-      
+
       console.log(`[DEBUG] Address save complete: ${savedCount} saved, ${skippedCount} skipped`);
 
       console.log(`\n========================================`);
@@ -435,7 +449,7 @@ export class AuthController {
           network: a.network,
           address: a.address,
         }));
-        
+
       // Sort addresses before sending
       const sortedAddresses = AuthController.sortAddresses(userAddresses);
 
@@ -455,12 +469,12 @@ export class AuthController {
       });
     } catch (error: any) {
       console.error("Registration error:", error);
-      
+
       // Handle duplicate key constraint errors
       if (error.code === '23505' || error.message?.includes('duplicate key')) {
         const detail = error.detail || '';
         let message = 'This information is already registered';
-        
+
         if (detail.includes('companyEmail')) {
           message = 'Company email already exists';
         } else if (detail.includes('email')) {
@@ -468,11 +482,11 @@ export class AuthController {
         } else if (detail.includes('companyCode')) {
           message = 'Company code already exists';
         }
-        
+
         res.status(409).json({ error: message });
         return;
       }
-      
+
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -1150,132 +1164,132 @@ export class AuthController {
    * - Marks email as verified if OTP is valid.
    * - Returns success or error.
    */
-static async verifyOTP(req: Request, res: Response): Promise<any> {
-  try {
-    let { email, otp, code } = req.body;
-    
-    // Allow 'code' to be used alias for 'otp'
-    if (!otp && code) otp = code;
-    
-    // ✅ FIX: Convert to string to handle both number and string inputs
-    if (otp !== undefined && otp !== null) {
-      otp = String(otp);
-    }
-    
-    // ✅ FIX: Validate email first
-    if (!email) {
-      res.status(400).json({ error: "Email is required" });
-      return;
-    }
-    
-    // ✅ FIX: Validate OTP is provided
-    if (!otp) {
-      res.status(400).json({ error: "OTP is required" });
-      return;
-    }
-    
-    const userRepository = AppDataSource.getRepository(User);
-
-    // Find user by email
-    const user = await userRepository.findOne({ where: { email } });
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
-
-    // Ensure OTP and expiry are present
-    if (!user.emailOTP || !user.emailOTPExpiry) {
-      res.status(400).json({
-        error: "OTP not found. Please request a new one.",
-      });
-      return;
-    }
-
-    // Check if OTP is expired
-    if (isOTPExpired(user.emailOTPExpiry)) {
-      res.status(400).json({
-        error: "OTP expired. Please request a new one.",
-      });
-      return;
-    }
-
-    // ✅ Check if OTP matches (now both are strings)
-    if (user.emailOTP !== otp) {
-      res.status(400).json({ error: "Invalid OTP" });
-      return;
-    }
-
-    // Mark email as verified and clear OTP fields
-    user.isEmailVerified = true;
-    user.emailOTP = null;
-    user.emailOTPExpiry = null;
-    await userRepository.save(user);
-
-    // Capture non-null values to satisfy TypeScript
-    const userId = user.id!;
-    const userEmail = user.email!;
-
-    // Create OTP verified notification
+  static async verifyOTP(req: Request, res: Response): Promise<any> {
     try {
-      await NotificationService.notifyOTPVerified(userId, {
-        verificationTime: new Date(),
-        email: userEmail,
-      });
-      console.log(
-        "[DEBUG] OTP verification notification created for user:",
-        userId,
-      );
-    } catch (notificationError) {
-      console.error(
-        "[DEBUG] Failed to create OTP verification notification:",
-        notificationError,
-      );
-    }
+      let { email, otp, code } = req.body;
 
-    // After successful verification, issue tokens so frontend can redirect to dashboard without logging in
-    try {
-      if (!userId || !userEmail) {
-        res.status(500).json({ error: "User data incomplete" });
+      // Allow 'code' to be used alias for 'otp'
+      if (!otp && code) otp = code;
+
+      // ✅ FIX: Convert to string to handle both number and string inputs
+      if (otp !== undefined && otp !== null) {
+        otp = String(otp);
+      }
+
+      // ✅ FIX: Validate email first
+      if (!email) {
+        res.status(400).json({ error: "Email is required" });
         return;
       }
-      const payload = { userId: userId, email: userEmail };
-      const accessToken = generateAccessToken(payload);
-      const refreshToken = generateRefreshToken(payload);
 
-      // Save refresh token to DB
-      const refreshTokenRepository =
-        AppDataSource.getRepository(RefreshToken);
-      const refreshTokenEntity = refreshTokenRepository.create({
-        token: refreshToken,
-        userId: userId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-      await refreshTokenRepository.save(refreshTokenEntity);
+      // ✅ FIX: Validate OTP is provided
+      if (!otp) {
+        res.status(400).json({ error: "OTP is required" });
+        return;
+      }
 
-      // Return tokens and user info so frontend can proceed to dashboard
-      return res.json({
-        message: "Email verified successfully",
-        accessToken,
-        refreshToken,
-        user: {
-          id: userId,
+      const userRepository = AppDataSource.getRepository(User);
+
+      // Find user by email
+      const user = await userRepository.findOne({ where: { email } });
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      // Ensure OTP and expiry are present
+      if (!user.emailOTP || !user.emailOTPExpiry) {
+        res.status(400).json({
+          error: "OTP not found. Please request a new one.",
+        });
+        return;
+      }
+
+      // Check if OTP is expired
+      if (isOTPExpired(user.emailOTPExpiry)) {
+        res.status(400).json({
+          error: "OTP expired. Please request a new one.",
+        });
+        return;
+      }
+
+      // ✅ Check if OTP matches (now both are strings)
+      if (user.emailOTP !== otp) {
+        res.status(400).json({ error: "Invalid OTP" });
+        return;
+      }
+
+      // Mark email as verified and clear OTP fields
+      user.isEmailVerified = true;
+      user.emailOTP = null;
+      user.emailOTPExpiry = null;
+      await userRepository.save(user);
+
+      // Capture non-null values to satisfy TypeScript
+      const userId = user.id!;
+      const userEmail = user.email!;
+
+      // Create OTP verified notification
+      try {
+        await NotificationService.notifyOTPVerified(userId, {
+          verificationTime: new Date(),
           email: userEmail,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.userType,
-          isEmailVerified: user.isEmailVerified,
-        },
-      });
-    } catch (tokenErr) {
-      console.error("Post-verify token issue:", tokenErr);
-      // If token issuance fails, still return success of verification
-      return res.json({ message: "Email verified successfully" });
+        });
+        console.log(
+          "[DEBUG] OTP verification notification created for user:",
+          userId,
+        );
+      } catch (notificationError) {
+        console.error(
+          "[DEBUG] Failed to create OTP verification notification:",
+          notificationError,
+        );
+      }
+
+      // After successful verification, issue tokens so frontend can redirect to dashboard without logging in
+      try {
+        if (!userId || !userEmail) {
+          res.status(500).json({ error: "User data incomplete" });
+          return;
+        }
+        const payload = { userId: userId, email: userEmail };
+        const accessToken = generateAccessToken(payload);
+        const refreshToken = generateRefreshToken(payload);
+
+        // Save refresh token to DB
+        const refreshTokenRepository =
+          AppDataSource.getRepository(RefreshToken);
+        const refreshTokenEntity = refreshTokenRepository.create({
+          token: refreshToken,
+          userId: userId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        });
+        await refreshTokenRepository.save(refreshTokenEntity);
+
+        // Return tokens and user info so frontend can proceed to dashboard
+        return res.json({
+          message: "Email verified successfully",
+          accessToken,
+          refreshToken,
+          user: {
+            id: userId,
+            email: userEmail,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.userType,
+            isEmailVerified: user.isEmailVerified,
+          },
+        });
+      } catch (tokenErr) {
+        console.error("Post-verify token issue:", tokenErr);
+        // If token issuance fails, still return success of verification
+        return res.json({ message: "Email verified successfully" });
+      }
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
-  } catch (error) {
-    console.error("OTP verification error:", error);
-    res.status(500).json({ error: "Internal server error" });
   }
-}
 
 
   /**
