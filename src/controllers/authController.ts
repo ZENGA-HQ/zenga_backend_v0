@@ -642,17 +642,18 @@ export class AuthController {
    */
   static async logout(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-      
-      if (token) {
-        // Optional: Revoke refresh tokens or add token to blacklist
-        // For now, just return success - frontend will clear local tokens
-        console.log(`[DEBUG] User logout: ${req.user?.id}`);
+      const { refreshToken } = req.body;
+      const refreshTokenRepository = AppDataSource.getRepository(RefreshToken);
+
+      // Revoke the refresh token if provided
+      if (refreshToken) {
+        await refreshTokenRepository.update(
+          { token: refreshToken },
+          { isRevoked: true },
+        );
       }
 
-      res.json({
-        message: "Logged out successfully",
-      });
+      res.json({ message: "Logged out successfully" });
     } catch (error) {
       console.error("Logout error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1410,39 +1411,6 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
   }
 
   /**
-   * Logout user by revoking the provided refresh token.
-   * - Marks the refresh token as revoked in the database.
-   * - Returns a success message.
-   */
-  static async logout(req: AuthRequest, res: Response): Promise<void> {
-    try {
-      const { refreshToken } = req.body;
-      const refreshTokenRepository = AppDataSource.getRepository(RefreshToken);
-
-      // Revoke the refresh token if provided
-      if (refreshToken) {
-        await refreshTokenRepository.update(
-          { token: refreshToken },
-          { isRevoked: true },
-        );
-      }
-
-      res.json({ message: "Logged out successfully" });
-      //           if (req.user && req.user.email) {
-      //     await sendMail(
-      //         req.user.email,
-      //         'Logout Notification',
-      //         logoutNotificationTemplate(req.user.email)
-      //     );
-      // }
-      // Optionally send logout notification email (commented out)
-    } catch (error) {
-      console.error("Logout error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
-  /**
    * Logout user from all devices by revoking all refresh tokens for the user.
    * - Marks all refresh tokens for the user as revoked in the database.
    * - Returns a success message.
@@ -1460,14 +1428,6 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
       }
 
       res.json({ message: "Logged out from all devices successfully" });
-      //            if (req.user && req.user.email) {
-      //     await sendMail(
-      //         req.user.email,
-      //         'Logout Notification',
-      //         logoutNotificationTemplate(req.user.email)
-      //     );
-      // }
-      // Optionally send logout notification email (commented out)
     } catch (error) {
       console.error("Logout all error:", error);
       res.status(500).json({ error: "Internal server error" });
