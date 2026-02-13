@@ -79,6 +79,25 @@ router.post(
 
 /**
  * @swagger
+ * /auth/logout:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Logout user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out
+ */
+// Logout user
+router.post(
+  "/logout",
+  authMiddleware,
+  AuthController.logout,
+);
+
+/**
+ * @swagger
  * /auth/google:
  *   post:
  *     tags: [Auth]

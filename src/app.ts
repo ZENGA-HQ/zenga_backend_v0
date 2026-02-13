@@ -4,6 +4,7 @@ import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger";
 import { swaggerBasicAuth } from "./middleware/swaggerBasicAuth";
 import authRouter from "./routes/authRoute";
+import userRouter from "./routes/userRoute";
 import walletRouter from "./routes/walletRoute";
 import notificationRouter from "./routes/notificationRoute";
 import splitPaymentRoutes from "./routes/splitPaymentRoute";
@@ -60,6 +61,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/user", userRouter);
 app.use("/wallet", walletRouter);
 app.use("/notification", notificationRouter);
 app.use("/payment", paymentRouter);

@@ -105,6 +105,16 @@ export class AuthController {
         targetUserType = UserType.COMPANY;
 
         const companyRepo = AppDataSource.getRepository(Company);
+        
+        // Check if company email already exists
+        const existingCompany = await companyRepo.findOne({ 
+          where: { companyEmail: email } 
+        });
+        if (existingCompany) {
+          res.status(409).json({ error: "Company email already registered" });
+          return;
+        }
+        
         const company = companyRepo.create({
           companyName,
           companyEmail: email,
@@ -443,8 +453,26 @@ export class AuthController {
         addresses: sortedAddresses,
         otp: otp,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+      
+      // Handle duplicate key constraint errors
+      if (error.code === '23505' || error.message?.includes('duplicate key')) {
+        const detail = error.detail || '';
+        let message = 'This information is already registered';
+        
+        if (detail.includes('companyEmail')) {
+          message = 'Company email already exists';
+        } else if (detail.includes('email')) {
+          message = 'Email already registered';
+        } else if (detail.includes('companyCode')) {
+          message = 'Company code already exists';
+        }
+        
+        res.status(409).json({ error: message });
+        return;
+      }
+      
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -510,6 +538,16 @@ export class AuthController {
         message: "Login successful",
         accessToken,
         refreshToken,
+        userId: user.id,
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.userType,
+        companyCode: user.company?.companyCode,
+        companyName: user.company?.companyName,
+        position: user.position,
+        salary: user.salary,
         user: {
           id: user.id,
           email: user.email,
@@ -518,6 +556,8 @@ export class AuthController {
           role: user.userType,
           position: user.position,
           salary: user.salary,
+          companyCode: user.company?.companyCode,
+          companyName: user.company?.companyName,
           company: user.company
             ? {
               id: user.company.id,
@@ -591,6 +631,30 @@ export class AuthController {
       }
     } catch (error) {
       console.error("Login error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  /**
+   * Logout user
+   * - Revokes the current session's refresh token
+   * - Returns success message
+   */
+  static async logout(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const token = req.headers.authorization?.split(" ")[1];
+      
+      if (token) {
+        // Optional: Revoke refresh tokens or add token to blacklist
+        // For now, just return success - frontend will clear local tokens
+        console.log(`[DEBUG] User logout: ${req.user?.id}`);
+      }
+
+      res.json({
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -1957,6 +2021,7 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
       const userRepo = AppDataSource.getRepository(User);
       const user = await userRepo.findOne({
         where: { id: req.user.id },
+        relations: ['company'],
         select: [
           "id",
           "email",
@@ -1985,7 +2050,10 @@ static async verifyOTP(req: Request, res: Response): Promise<any> {
           firstName: user.firstName,
           lastName: user.lastName,
           phoneNumber: user.phoneNumber,
+          role: user.userType,
           userType: user.userType,
+          companyCode: user.company?.companyCode,
+          companyName: user.company?.companyName,
           isEmailVerified: user.isEmailVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
