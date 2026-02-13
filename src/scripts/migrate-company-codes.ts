@@ -13,6 +13,7 @@
 
 import { AppDataSource } from '../config/database';
 import { Company } from '../entities/Company';
+import { IsNull } from 'typeorm';
 import { randomBytes } from 'crypto';
 
 async function generateCompanyCode(): Promise<string> {
@@ -40,7 +41,7 @@ async function migrateCompanyCodes() {
 
         // Find all companies without company codes
         const companiesWithoutCodes = await companyRepo.find({
-            where: { companyCode: null }
+            where: { companyCode: IsNull() }
         });
 
         console.log(`[Migration] Found ${companiesWithoutCodes.length} companies without codes`);
