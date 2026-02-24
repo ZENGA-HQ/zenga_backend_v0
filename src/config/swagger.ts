@@ -16,12 +16,12 @@ const options: swaggerJSDoc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:5501",
+        url: `http://localhost:${PORT}`,
         description: "Development Server (Docker)",
       },
       {
-        url: `http://localhost:${PORT}`,
-        description: "Production Server",
+        url: "http://0.0.0.0:5500",
+        description: "Docker Container",
       },
     ],
     components: {
@@ -38,9 +38,53 @@ const options: swaggerJSDoc.Options = {
           properties: {
             email: { type: "string", example: "user@example.com" },
             password: { type: "string", example: "strongP@ssw0rd" },
-            name: { type: "string", example: "Jane Doe" }
+            name: { type: "string", example: "Jane Doe" },
+            userType: { 
+              type: "string", 
+              enum: ["individual", "company", "employee"],
+              example: "individual",
+              description: "Type of user: 'individual' for regular users, 'company' for company admins, 'employee' for employees joining a company"
+            },
+            companyName: { 
+              type: "string", 
+              example: "Acme Corporation",
+              description: "Required if userType is 'company'"
+            },
+            companyCode: { 
+              type: "string", 
+              example: "ABC12345",
+              description: "Required if userType is 'employee'. Use the company code provided by your company admin."
+            }
           },
-          required: ["email", "password"]
+          required: ["email", "password"],
+          examples: {
+            individual: {
+              value: {
+                email: "john@example.com",
+                password: "SecureP@ss123",
+                name: "John Doe",
+                userType: "individual"
+              }
+            },
+            company: {
+              value: {
+                email: "admin@company.com",
+                password: "SecureP@ss123",
+                name: "Admin User",
+                userType: "company",
+                companyName: "Tech Solutions Ltd"
+              }
+            },
+            employee: {
+              value: {
+                email: "employee@company.com",
+                password: "SecureP@ss123",
+                name: "Employee Name",
+                userType: "employee",
+                companyCode: "ABC12345"
+              }
+            }
+          }
         },
         LoginRequest: {
           type: "object",
@@ -91,7 +135,9 @@ const options: swaggerJSDoc.Options = {
       },
     ],
   },
-  apis: ["./src/routes/*.ts", "./src/app.ts"], // Path to the API docs
+  apis: process.env.NODE_ENV === "production" 
+    ? ["./dist/routes/*.js", "./dist/app.js"] 
+    : ["./src/routes/*.ts", "./src/app.ts"], // Path to the API docs
 };
 
 const swaggerSpec = swaggerJSDoc(options);

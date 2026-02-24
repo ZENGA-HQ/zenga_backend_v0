@@ -18,8 +18,10 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm install --omit=dev  # Changed from npm ci --omit=dev
 
+
 # Copy built files from builder
 COPY --from=builder /usr/src/app/dist ./dist
+
 
 EXPOSE 5500
 

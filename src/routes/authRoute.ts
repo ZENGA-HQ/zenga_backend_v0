@@ -24,7 +24,12 @@ const router = Router();
  * /auth/register:
  *   post:
  *     tags: [Auth]
- *     summary: Register a new user
+ *     summary: Register a new user (individual, company, or employee)
+ *     description: |
+ *       Register different types of users:
+ *       - **Individual**: Regular user account
+ *       - **Company**: Create a company and get a company code for employee invitations
+ *       - **Employee**: Join an existing company using the company code
  *     requestBody:
  *       required: true
  *       content:
@@ -33,13 +38,34 @@ const router = Router();
  *             $ref: '#/components/schemas/RegisterRequest'
  *     responses:
  *       201:
- *         description: User created
+ *         description: User created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                   description: JWT token for API authentication
+ *                 refreshToken:
+ *                   type: string
+ *                   description: Token to refresh access token when expired
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     userType:
+ *                       type: string
+ *                     companyCode:
+ *                       type: string
+ *                       description: "Only for company users - share this code with employees to invite them"
  *       400:
- *         $ref: '#/components/responses/BadRequest'
+ *         description: Missing required fields or validation error
+ *       409:
+ *         description: Email already registered or company email already exists
  */
 // Register new user (strict rate limit: 5 reqs/min)
 router.post(

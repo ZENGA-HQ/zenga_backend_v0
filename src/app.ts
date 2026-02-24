@@ -9,15 +9,26 @@ import walletRouter from "./routes/walletRoute";
 import notificationRouter from "./routes/notificationRoute";
 import splitPaymentRoutes from "./routes/splitPaymentRoute";
 import paymentRouter from "./routes/paymentRoute";
+import pmRouter from "./routes/pmRoute";
+import companyRouter from "./routes/companyRoute";
 
 
 const app = express();
 
-app.use(cors());
+// Enhanced CORS configuration for development and Swagger
+app.use(cors({
+  origin: process.env.NODE_ENV === "production" 
+    ? process.env.CORS_ORIGIN || "http://localhost:5500"
+    : true, // Allow all origins in development
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use(express.json());
 
-// Swagger UI setup (protected with Basic Auth)
-app.use("/api-docs", swaggerBasicAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger UI (auth disabled in development for easier access)
+const swaggerAuth = process.env.NODE_ENV === "production" ? swaggerBasicAuth : [];
+app.use("/api-docs", swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /**
  * @swagger
@@ -66,6 +77,8 @@ app.use("/wallet", walletRouter);
 app.use("/notification", notificationRouter);
 app.use("/payment", paymentRouter);
 app.use("/split-payment", splitPaymentRoutes);
+app.use("/pm", pmRouter);
+app.use("/company", companyRouter);
 
 
 export default app;

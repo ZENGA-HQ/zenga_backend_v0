@@ -18,6 +18,12 @@ import { AirtimePurchase } from "../entities/AirtimePurchase";
 import { DataPurchase } from "../entities/DataPurchase";
 import { ElectricityPurchase } from "../entities/ElectricityPurchase";
 import { FiatTransaction } from "../entities/FiatTransaction";
+import { PMRoadmap } from "../entities/PMRoadmap";
+import { PMTask } from "../entities/PMTask";
+import { PMTaskAssignment } from "../entities/PMTaskAssignment";
+import { PMConversation } from "../entities/PMConversation";
+import { EmployeePerformance } from "../entities/EmployeePerformance";
+import { PMTaskAssignmentComplaint } from "../entities/PMTaskAssignmentComplaint";
 
 
 export const AppDataSource = new DataSource({
@@ -41,6 +47,12 @@ export const AppDataSource = new DataSource({
     DataPurchase,
     ElectricityPurchase,
     FiatTransaction,
+    PMRoadmap,
+    PMTask,
+    PMTaskAssignment,
+    PMConversation,
+    EmployeePerformance,
+    PMTaskAssignmentComplaint,
   ],
   migrations: ["src/migrations/*.ts"],
   subscribers: ["src/subscribers/*.ts"],
