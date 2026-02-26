@@ -17,8 +17,12 @@ const app = express();
 
 // Enhanced CORS configuration for development and Swagger
 app.use(cors({
-  origin: process.env.NODE_ENV === "production" 
-    ? process.env.CORS_ORIGIN || "http://localhost:5500"
+  origin: process.env.NODE_ENV === "production"
+    ? [
+      process.env.CORS_ORIGIN || "http://localhost:5500",
+      "https://payroll-git-dev-gosteans-projects.vercel.app",
+      "https://www.getzenga.com"
+    ]
     : true, // Allow all origins in development
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -46,7 +50,7 @@ app.use("/api-docs", swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec))
  *               example: Zenga Backend Server is running!
  */
 app.get("/", (req, res) => {
-       res.send("Zenga Backend Server is running!");
+  res.send("Zenga Backend Server is running!");
 });
 
 // Health check endpoint
@@ -68,7 +72,7 @@ app.get("/", (req, res) => {
  *                 timestamp: { type: string, format: date-time }
  */
 app.get("/health", (req, res) => {
-       res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 app.use("/auth", authRouter);
