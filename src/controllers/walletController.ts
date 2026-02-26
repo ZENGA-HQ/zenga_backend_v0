@@ -77,6 +77,47 @@ export class WalletController {
         const STRK_MAINNET = `https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/${process.env.ALCHEMY_STARKNET_KEY}`;
         const STRK_TESTNET = `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${process.env.ALCHEMY_STARKNET_KEY}`;
 
+        // Solana USDC balance logic
+        if (addr.chain === "solana") {
+          try {
+            // Native SOL balance
+            const SOL_RPC = addr.network === "testnet" 
+              ? `https://solana-devnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`
+              : `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
+            const connection = new Connection(SOL_RPC);
+            const publicKey = new PublicKey(addr.address as string);
+            const balance = await connection.getBalance(publicKey);
+            balances.push({
+              chain: addr.chain,
+              network: addr.network,
+              address: addr.address,
+              balance: (balance / 1e9).toString(),
+              symbol: "SOL",
+            });
+
+            // USDC balance
+            const { getSolanaUsdcBalance } = await import("../services/solanaService");
+            const usdcBalance = await getSolanaUsdcBalance(addr.address as string);
+            balances.push({
+              chain: addr.chain,
+              network: addr.network,
+              address: addr.address,
+              balance: usdcBalance.toString(),
+              symbol: "USDC",
+            });
+            continue; // Skip default SOL logic below
+          } catch (err) {
+            balances.push({
+              chain: addr.chain,
+              network: addr.network,
+              address: addr.address,
+              balance: "0",
+              symbol: "USDC",
+              error: "Failed to fetch USDC",
+            });
+          }
+        }
+
         if (addr.chain === "starknet") {
           try {
             const provider = new RpcProvider({
