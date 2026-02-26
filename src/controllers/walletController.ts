@@ -77,11 +77,11 @@ export class WalletController {
         const STRK_MAINNET = `https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_8/${process.env.ALCHEMY_STARKNET_KEY}`;
         const STRK_TESTNET = `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${process.env.ALCHEMY_STARKNET_KEY}`;
 
-        // Solana USDC balance logic
-        if (addr.chain === "solana") {
+        // Solana: Always return SOL, and try to return USDC
+        if (String(addr.chain) === "solana") {
+          // Native SOL balance
           try {
-            // Native SOL balance
-            const SOL_RPC = addr.network === "testnet" 
+            const SOL_RPC = addr.network === "testnet"
               ? `https://solana-devnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`
               : `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
             const connection = new Connection(SOL_RPC);
@@ -94,10 +94,21 @@ export class WalletController {
               balance: (balance / 1e9).toString(),
               symbol: "SOL",
             });
-
-            // USDC balance
+          } catch (err) {
+            balances.push({
+              chain: addr.chain,
+              network: addr.network,
+              address: addr.address,
+              balance: "0",
+              symbol: "SOL",
+              error: "Failed to fetch SOL",
+            });
+          }
+          // USDC balance
+          try {
             const { getSolanaUsdcBalance } = await import("../services/solanaService");
-            const usdcBalance = await getSolanaUsdcBalance(addr.address as string);
+            const network = addr.network === "testnet" ? "testnet" : "mainnet";
+            const usdcBalance = await getSolanaUsdcBalance(addr.address as string, network);
             balances.push({
               chain: addr.chain,
               network: addr.network,
@@ -105,7 +116,6 @@ export class WalletController {
               balance: usdcBalance.toString(),
               symbol: "USDC",
             });
-            continue; // Skip default SOL logic below
           } catch (err) {
             balances.push({
               chain: addr.chain,
@@ -116,9 +126,10 @@ export class WalletController {
               error: "Failed to fetch USDC",
             });
           }
+          continue;
         }
 
-        if (addr.chain === "starknet") {
+        if (String(addr.chain) === "starknet") {
           try {
             const provider = new RpcProvider({
               nodeUrl: addr.network === "testnet" ? STRK_TESTNET : STRK_MAINNET,
@@ -165,7 +176,7 @@ export class WalletController {
               });
             }
           }
-        } else if (addr.chain === "ethereum") {
+        } else if (String(addr.chain) === "ethereum") {
           try {
             const provider = new ethers.JsonRpcProvider(
               addr.network === "testnet" ? ETH_TESTNET : ETH_MAINNET
@@ -191,7 +202,7 @@ export class WalletController {
               symbol: "DOT",
             });
           }
-        } else if (addr.chain === "bitcoin") {
+        } else if (String(addr.chain) === "bitcoin") {
           console.log(
             `[DEBUG] Checking BTC balance for address: ${addr.address}`
           );
@@ -242,9 +253,9 @@ export class WalletController {
               error: "Failed to fetch",
             });
           }
-        } else if (addr.chain === "solana") {
+        } else if (String(addr.chain) === "solana") {
           try {
-            const SOL_RPC = addr.network === "testnet" 
+            const SOL_RPC = addr.network === "testnet"
               ? `https://solana-devnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`
               : `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}`;
             const connection = new Connection(SOL_RPC);
@@ -265,7 +276,7 @@ export class WalletController {
               error: "Failed to fetch",
             });
           }
-        } else if (addr.chain === "stellar") {
+        } else if (String(addr.chain) === "stellar") {
           // Stellar balance via Horizon
           try {
             const HORIZON_MAIN = "https://horizon.stellar.org";
@@ -304,7 +315,7 @@ export class WalletController {
               error: "Failed to fetch",
             });
           }
-        } else if (addr.chain === "polkadot") {
+        } else if (String(addr.chain) === "polkadot") {
           // Polkadot balance via @polkadot/api (use derived balances so "transferable" matches polkadot.js UI)
           try {
             // @ts-ignore - dynamic require
@@ -3143,6 +3154,7 @@ export class WalletController {
 
             const publicKey = new PublicKey(addr.address as string);
             let balanceInSOL = 0;
+            let balanceInUSDC = 0;
 
             try {
               const connection = providers[key];
@@ -3174,17 +3186,39 @@ export class WalletController {
               }
             }
 
+            // USDC balance
+            try {
+              const { getSolanaUsdcBalance } = await import("../services/solanaService");
+              balanceInUSDC = await getSolanaUsdcBalance(addr.address as string, "testnet");
+            } catch (usdcErr) {
+              console.warn(
+                "Solana USDC balance fetch failed:",
+                (usdcErr as any)?.message || String(usdcErr)
+              );
+            }
+
             try {
               addr.lastKnownBalance = balanceInSOL;
               addressRepo.save(addr).catch(() => { });
             } catch { }
-            return {
-              chain: addr.chain,
-              network: "testnet",
-              address: addr.address,
-              balance: balanceInSOL.toString(),
-              symbol: "SOL",
-            };
+
+            // Return both SOL and USDC as separate entries
+            return [
+              {
+                chain: addr.chain,
+                network: "testnet",
+                address: addr.address,
+                balance: balanceInSOL.toString(),
+                symbol: "SOL",
+              },
+              {
+                chain: addr.chain,
+                network: "testnet",
+                address: addr.address,
+                balance: balanceInUSDC.toString(),
+                symbol: "USDC",
+              },
+            ];
           } else if (addr.chain === "stellar") {
             const horizon = "https://horizon-testnet.stellar.org";
             const resp: any = await withTimeout(
@@ -3542,17 +3576,38 @@ export class WalletController {
               7000
             );
             const balanceInSOL = bal / 1e9;
+            let balanceInUSDC = 0;
+            try {
+              const { getSolanaUsdcBalance } = await import("../services/solanaService");
+              balanceInUSDC = await getSolanaUsdcBalance(addr.address as string, "mainnet");
+            } catch (usdcErr) {
+              console.warn(
+                "Solana USDC mainnet balance fetch failed:",
+                (usdcErr as any)?.message || String(usdcErr)
+              );
+            }
+
             try {
               addr.lastKnownBalance = balanceInSOL;
               addressRepo.save(addr).catch(() => { });
             } catch { }
-            return {
-              chain: addr.chain,
-              network: "mainnet",
-              address: addr.address,
-              balance: balanceInSOL.toString(),
-              symbol: "SOL",
-            };
+
+            return [
+              {
+                chain: addr.chain,
+                network: "mainnet",
+                address: addr.address,
+                balance: balanceInSOL.toString(),
+                symbol: "SOL",
+              },
+              {
+                chain: addr.chain,
+                network: "mainnet",
+                address: addr.address,
+                balance: balanceInUSDC.toString(),
+                symbol: "USDC",
+              },
+            ];
           } else if (addr.chain === "stellar") {
             const horizon = "https://horizon.stellar.org";
             const resp: any = await withTimeoutMain(

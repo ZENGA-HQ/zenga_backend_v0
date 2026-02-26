@@ -5,12 +5,16 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { getAccount, getAssociatedTokenAddress } from '@solana/spl-token';
 
 const SOLANA_DEVNET = 'https://api.devnet.solana.com';
+const SOLANA_MAINNET = `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_STARKNET_KEY}` || 'https://api.mainnet-beta.solana.com';
 const USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-export async function getSolanaUsdcBalance(walletAddress: string): Promise<number> {
-  const connection = new Connection(SOLANA_DEVNET);
+export async function getSolanaUsdcBalance(walletAddress: string, network: 'testnet' | 'mainnet' = 'testnet'): Promise<number> {
+  const rpc = network === 'testnet' ? SOLANA_DEVNET : SOLANA_MAINNET;
+  const connection = new Connection(rpc);
   const owner = new PublicKey(walletAddress);
-  const usdcMint = new PublicKey(USDC_MINT_DEVNET);
+  const usdcMint = new PublicKey(network === 'testnet' ? USDC_MINT_DEVNET : USDC_MINT_MAINNET);
+
   const ata = await getAssociatedTokenAddress(usdcMint, owner);
   try {
     const account = await getAccount(connection, ata);
