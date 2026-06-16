@@ -16,3 +16,10 @@ npm-debug.log*
 server_output.txt
 Dockerfile
 docker-compose.yml
+
+
+# # 1. Build and start the containers in the background
+# docker compose up --build -d
+
+# 2. View the logs to ensure everything is running
+# docker compose logs -f app

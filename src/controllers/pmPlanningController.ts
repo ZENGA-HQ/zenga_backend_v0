@@ -36,6 +36,7 @@ export class PMPlanningController {
         conversationId: result.conversation.id,
         questions: result.questions,
         context: result.context,
+        aiAnswer: result.aiAnswer,
       });
     } catch (error) {
       console.error("[PMPlanning] startConversation error:", error);

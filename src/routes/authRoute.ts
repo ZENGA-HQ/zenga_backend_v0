@@ -36,6 +36,29 @@ const router = Router();
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/RegisterRequest'
+ *           examples:
+ *             company:
+ *               summary: Company Admin
+ *               value:
+ *                 email: "admin@acme.com"
+ *                 password: "strongP@ssw0rd"
+ *                 userType: "company"
+ *                 companyName: "Acme Corporation"
+ *             individual:
+ *               summary: Individual User
+ *               value:
+ *                 email: "user@example.com"
+ *                 password: "strongP@ssw0rd"
+ *                 name: "John Doe"
+ *                 userType: "individual"
+ *             employee:
+ *               summary: Employee
+ *               value:
+ *                 email: "employee@company.com"
+ *                 password: "SecureP@ss123"
+ *                 name: "Employee Name"
+ *                 userType: "employee"
+ *                 companyCode: "ABC12345"
  *     responses:
  *       201:
  *         description: User created successfully

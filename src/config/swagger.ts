@@ -39,19 +39,19 @@ const options: swaggerJSDoc.Options = {
             email: { type: "string", example: "user@example.com" },
             password: { type: "string", example: "strongP@ssw0rd" },
             name: { type: "string", example: "Jane Doe" },
-            userType: { 
-              type: "string", 
+            userType: {
+              type: "string",
               enum: ["individual", "company", "employee"],
               example: "individual",
               description: "Type of user: 'individual' for regular users, 'company' for company admins, 'employee' for employees joining a company"
             },
-            companyName: { 
-              type: "string", 
+            companyName: {
+              type: "string",
               example: "Acme Corporation",
               description: "Required if userType is 'company'"
             },
-            companyCode: { 
-              type: "string", 
+            companyCode: {
+              type: "string",
               example: "ABC12345",
               description: "Required if userType is 'employee'. Use the company code provided by your company admin."
             }
@@ -135,8 +135,8 @@ const options: swaggerJSDoc.Options = {
       },
     ],
   },
-  apis: process.env.NODE_ENV === "production" 
-    ? ["./dist/routes/*.js", "./dist/app.js"] 
+  apis: process.env.NODE_ENV === "production"
+    ? ["./dist/routes/*.js", "./dist/app.js"]
     : ["./src/routes/*.ts", "./src/app.ts"], // Path to the API docs
 };
 

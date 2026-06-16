@@ -21,6 +21,19 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 export class PMTaskService {
   static async generateTasks(input: PMTaskGenerationInput): Promise<PMTaskDraft[]> {
+    const provider = process.env.PM_AI_PROVIDER || "openai";
+
+    if (provider === "gemini" && process.env.GEMINI_API_KEY) {
+      try {
+        const geminiTasks = await this.generateTasksWithGemini(input);
+        if (geminiTasks.length > 0) {
+          return geminiTasks;
+        }
+      } catch (error) {
+        console.error("[PMTaskService] Gemini generation failed, using fallback:", error);
+      }
+    }
+
     if (process.env.OPENAI_API_KEY) {
       try {
         const aiTasks = await this.generateTasksWithOpenAI(input);
@@ -33,6 +46,64 @@ export class PMTaskService {
     }
 
     return this.generateFallbackTasks(input);
+  }
+
+  private static async generateTasksWithGemini(
+    input: PMTaskGenerationInput
+  ): Promise<PMTaskDraft[]> {
+    const prompt = this.buildPrompt(input);
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+    const response = await axios.post(
+      GEMINI_URL,
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: `${prompt}\n\nReturn ONLY the JSON. No markdown backticks.`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          topP: 0.8,
+          topK: 40,
+        },
+      },
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 20000,
+      }
+    );
+
+    const content = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) {
+      return [];
+    }
+
+    try {
+      const cleanContent = content.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(cleanContent);
+      if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
+        return [];
+      }
+
+      return parsed.tasks.map((task: any) => ({
+        title: String(task.title || "Untitled task"),
+        description: task.description ? String(task.description) : undefined,
+        phase: task.phase ? String(task.phase) : undefined,
+        effortHours: Number(task.effortHours || 0),
+        priority: this.normalizePriority(task.priority),
+        dependencyTitles: Array.isArray(task.dependencies)
+          ? task.dependencies.map((dep: any) => String(dep))
+          : undefined,
+      }));
+    } catch (e) {
+      console.error("[PMTaskService] Failed to parse Gemini response:", content);
+      return [];
+    }
   }
 
   private static async generateTasksWithOpenAI(

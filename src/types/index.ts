@@ -33,6 +33,9 @@ export enum ChainType {
     POLKADOT = 'polkadot',
     USDT_ERC20 = 'usdt_erc20',
     USDT_TRC20 = 'usdt_trc20',
+    USDC_EVM = 'usdc-evm',
+    USDC_SOLANA = 'usdc-solana',
+    USDC_STARKNET = 'usdc-starknet',
 }
 
 export enum NotificationType {
@@ -58,7 +61,7 @@ export enum NotificationType {
     UTILITY_PAYMENT = 'utility_payment',
     PURCHASE_FAILED = 'purchase_failed',
     SEND = "Payment sent",
-        DEPLOY = 'DEPLOY',
-        QR_PAYMENT_COMPLETED="QR_PAYMENT_COMPLETED",
-        CANCELLED="CANCELLED"
+    DEPLOY = 'DEPLOY',
+    QR_PAYMENT_COMPLETED = "QR_PAYMENT_COMPLETED",
+    CANCELLED = "CANCELLED"
 }

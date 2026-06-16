@@ -65,3 +65,6 @@ jest.cache
 
 # Local overrides
 *.local
+
+# Claude Code
+.claude/
